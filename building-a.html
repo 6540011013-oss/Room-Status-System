@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -183,26 +183,30 @@
 
     <div class="flex flex-wrap items-center gap-1.5">
       
-      <button id="edit-mode-btn" class="edit-mode-base flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none cursor-pointer text-slate-600 hover:bg-slate-100 hover:text-slate-800">
+      <button id="edit-mode-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
         <span id="edit-icon">🔒</span>
         <span id="edit-mode-text">LOCK MODE</span>
       </button>
 
-      <button id="admin-btn-canva" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-all border-none bg-transparent cursor-pointer">
+      <button id="admin-btn-canva" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
           <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
         </svg>
         <span>SETTINGS</span>
-      </button>
+      </button> 
 
-      <button id="dashboardBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-all border-none bg-transparent cursor-pointer">
+      <button onclick="enableQuickMode()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none cursor-pointer text-orange-600 bg-orange-50 hover:bg-orange-100">
+          ⚡ QUICK UPDATE
+      </button> 
+
+      <button id="dashboardBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
           <rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>
         </svg>
         <span>DASHBOARD</span>
       </button>
 
-      <button id="open-date-picker-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-all border-none bg-transparent cursor-pointer">
+      <button id="open-date-picker-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
           <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>
         </svg>
@@ -211,14 +215,13 @@
 
       <div class="h-6 w-px bg-slate-300 mx-1"></div>
 
-      <a href="building-b.html" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-all border-none cursor-pointer no-underline">
+      <a href="building-b.html" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none cursor-pointer no-underline bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
           <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
         </svg>
         <span>BUILDING B</span>
       </a>
-    </div>
-
+</div>
     <button id="adminBtn" class="flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black uppercase tracking-wide transition-all duration-300 cursor-pointer border-2 border-slate-800 text-slate-800 hover:bg-slate-800 hover:text-white group">
       <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 transform group-hover:translate-x-1 transition-transform">
         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/>
@@ -228,7 +231,21 @@
 
   </div>
 </header>
+<div id="quick-status-bar" class="hidden sticky top-[64px] z-[2500] bg-slate-900 shadow-xl border-b border-white/10 overflow-x-auto">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <span class="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span class="text-white text-xs font-black uppercase tracking-widest">Quick Mode:</span>
+        </div>
+        
+        <div id="quick-tool-options" class="flex gap-2">
+            </div>
 
+        <button onclick="disableQuickMode()" class="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase transition-all border-none cursor-pointer shadow-lg shadow-red-500/20">
+            Exit Mode
+        </button>
+    </div>
+</div>
 <div class="plan-wrapper">
   <div class="building-plan">
 
@@ -464,15 +481,35 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Width (cm)</label> 
-                        <input type="text" id="item-width-input" placeholder="55" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Length (cm)</label> 
-                        <input type="text" id="item-height-input" placeholder="55" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition">
-                    </div>
-                </div>
+    <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Width (ความกว้าง)</label> 
+        <div class="flex">
+            <input type="text" id="item-width-input" placeholder="55" class="w-full px-4 py-3 rounded-l-xl border border-slate-300 focus:border-emerald-500 outline-none transition">
+            <select id="item-width-unit" class="bg-slate-50 border border-l-0 border-slate-300 rounded-r-xl px-2 text-xs font-bold text-slate-600 outline-none cursor-pointer">
+                <option value="cm">cm</option>
+                <option value="m">m</option>
+                <option value="mm">mm</option>
+             <option value="Inch">Inch</option>
+             <option value="ft">ft</option>
+             <option value="Sq.m.">Sq.m.</option>
+            </select>
+        </div>
+    </div>
+    <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Length (ความยาว)</label> 
+        <div class="flex">
+            <input type="text" id="item-height-input" placeholder="55" class="w-full px-4 py-3 rounded-l-xl border border-slate-300 focus:border-emerald-500 outline-none transition">
+            <select id="item-height-unit" class="bg-slate-50 border border-l-0 border-slate-300 rounded-r-xl px-2 text-xs font-bold text-slate-600 outline-none cursor-pointer">
+                <option value="cm">cm</option>
+                <option value="m">m</option>
+                <option value="mm">mm</option>
+             <option value="Inch">Inch</option>
+             <option value="ft">ft</option>
+             <option value="Sq.m.">Sq.m.</option>
+            </select>
+        </div>
+    </div>
+</div>
 
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Note</label>

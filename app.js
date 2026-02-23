@@ -340,12 +340,14 @@ function renderRoomInfoList(roomId) {
     items.forEach((item, index) => {
         // หา index จริง
         const realIndex = (map[roomId] || []).indexOf(item);
-        
-        const category = item.category || 'อื่นๆ';
+       const category = item.category || 'อื่นๆ';
         const categoryMeta = getCategoryMeta(category);
         const displayCategory = categoryMeta.label;
         const icon = categoryMeta.icon;
-        const dimText = (item.width || item.height) ? `${item.width || '-'} × ${item.height || '-'} cm` : 'Size not specified';
+        
+        // ลบ cm ตรงบรรทัดนี้ออกแล้ว
+        const dimText = (item.width || item.height) ? `${item.width || '-'} × ${item.height || '-'}` : 'Size not specified';
+        
         const noteText = String(item.note || '').trim();
         const noteHtml = noteText
             ? `<p class="text-slate-600 text-sm mb-4 break-words">${noteText}</p>`
@@ -1027,15 +1029,23 @@ window.saveCanvaItem = function() {
     if (!currentViewingRoom) return;
     if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
 
-    // Safely read form values
     const nameEl = el('item-name-input');
     const widthEl = el('item-width-input');
     const heightEl = el('item-height-input');
+    
+    // 1. เพิ่มการดึงค่าจาก Dropdown หน่วย (ที่เราจะไปเพิ่ม id นี้ใน HTML)
+    const widthUnitEl = el('item-width-unit'); 
+    const heightUnitEl = el('item-height-unit');
+
+    const name = nameEl ? String(nameEl.value || '').trim() : '';
+    
+    // 2. แก้ไขการเก็บค่า: เอาตัวเลขมาต่อกับหน่วยที่เลือกก่อนบันทึก
+    // เช่น ถ้ากรอก 150 และเลือก cm จะได้ "150 cm"
+    const width = widthEl && widthEl.value ? `${widthEl.value} ${widthUnitEl.value}` : '';
+    const height = heightEl && heightEl.value ? `${heightEl.value} ${heightUnitEl.value}` : '';
+    
     const noteEl = el('item-note-input');
     const catEl = el('item-category-input');
-    const name = nameEl ? String(nameEl.value || '').trim() : '';
-    const width = widthEl ? String(widthEl.value || '').trim() : '';
-    const height = heightEl ? String(heightEl.value || '').trim() : '';
     const note = noteEl ? String(noteEl.value || '').trim() : '';
     const image = currentImageData || '';
     const category = catEl ? String(catEl.value || '') : (getItemCategories()[0]?.name || 'อื่นๆ');
@@ -1046,6 +1056,7 @@ window.saveCanvaItem = function() {
     const map = loadRoomInfoMap();
     if (!map[roomId]) map[roomId] = [];
 
+    // 3. บันทึกข้อมูลที่มีหน่วยติดไปด้วยลงใน Database/Storage
     map[roomId].push({ name, width, height, note, image, category });
     roomInfoMapCache = map;
     saveRoomInfoMapForRoom(roomId);
@@ -1231,14 +1242,85 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
     }
 
-    getRoomElements().forEach(el => {
-        el.onclick = (e) => {
-            e.stopPropagation();
-            if (selectedSnapshotDate !== getTodayLocal()) { openRoomInfoModal(el); return; }
-            if (isEditMode && isAdminUser()) openEditModal(el); else openRoomInfoModal(el);
-        };
-    });  
+getRoomElements().forEach(el => {
+    el.onclick = async (e) => {
+        e.stopPropagation();
+        
+        // ==========================================
+        // ⚡ โหมด QUICK UPDATE (วาดไอคอนทันทีที่จิ้ม)
+        // ==========================================
+        if (typeof quickModeActive !== 'undefined' && quickModeActive && selectedQuickStatus !== '') {
+            const roomId = getRoomId(el);
+            const currentMaint = el.getAttribute('data-maint') || "";
+            
+            // สลับสถานะ: ถ้ากดสถานะเดิมให้เอาออก ถ้ากดอันใหม่ให้เปลี่ยน
+            const newStatus = (currentMaint === selectedQuickStatus) ? '' : selectedQuickStatus;
+            
+            // 1. ทำให้ปุ่มกระตุกนิดนึงให้รู้ว่าจิ้มติดแล้ว
+            el.style.transform = 'scale(0.95)';
+            setTimeout(() => el.style.transform = 'scale(1)', 150);
 
+            // 2. อัปเดตสถานะที่หน้าห้องทันที
+            el.setAttribute('data-maint', newStatus);
+
+            // 3. วาดไอคอนหรือลบไอคอน (Real-time UI)
+            const existingBadges = el.querySelectorAll('.quick-badge-icon, .maint-badge');
+            existingBadges.forEach(badge => badge.remove()); // ล้างของเก่าออกก่อน
+
+            if (newStatus !== '') {
+                // ไปดึงไอคอน Emoji (เช่น ❄️, ⚡) มาจากปุ่มบนแถบดำที่กำลังเลือกอยู่
+                const activeBtn = document.querySelector('.quick-tool-btn.bg-blue-600');
+                let iconText = '🔧'; 
+                if (activeBtn) {
+                    const span = activeBtn.querySelector('span');
+                    iconText = span ? span.innerText : activeBtn.innerText.trim().charAt(0);
+                }
+
+                // สร้างไอคอนวงกลม แปะไว้มุมขวาบนของห้อง
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'quick-badge-icon absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-red-500 rounded-full flex items-center justify-center shadow-lg text-[11px] z-50';
+                iconDiv.innerHTML = iconText;
+                el.appendChild(iconDiv);
+            }
+
+            // 4. แอบส่งข้อมูลไปเซฟใน Database หลังบ้าน (ไม่ต้องรอหน้าจอโหลด)
+            const payload = {
+                building: typeof BUILDING_ID !== 'undefined' ? BUILDING_ID : 'A',
+                room_id: roomId,
+                guest_name: (el.getAttribute('data-name') || '').trim(),
+                room_type: el.getAttribute('data-type') || '',
+                maint_status: newStatus,
+                maint_note: newStatus ? 'Quick Update' : '', 
+                ap_installed: el.getAttribute('data-ap') === 'true' ? 1 : 0,
+                ap_install_date: el.getAttribute('data-ap-date') || ''
+            };
+
+            try {
+                await apiRequest('save_room_state', payload);
+                // สั่งซิงค์เงียบๆ เผื่ออัปเดต Service Status แถบซ้ายมือ
+                if (typeof window.applyRoomStatesFromDb === 'function') window.applyRoomStatesFromDb();
+                if (typeof window.renderServiceSidebar === 'function') window.renderServiceSidebar();
+            } catch (error) {
+                console.error('Save error:', error);
+            }
+            
+            return; // จบการทำงานโหมด Quick
+        }
+
+        // ==========================================
+        // 🏠 โหมดการคลิกปกติ (ดูรายละเอียดห้อง)
+        // ==========================================
+        if (typeof selectedSnapshotDate !== 'undefined' && selectedSnapshotDate !== getTodayLocal()) { 
+            if (typeof openRoomInfoModal === 'function') openRoomInfoModal(el); 
+            return; 
+        }
+        if (typeof isEditMode !== 'undefined' && isEditMode && typeof isAdminUser === 'function' && isAdminUser()) {
+            if (typeof openEditModal === 'function') openEditModal(el); 
+        } else {
+            if (typeof openRoomInfoModal === 'function') openRoomInfoModal(el);
+        }
+    };
+});
    // Save Edit Room
 const btnSave = document.getElementById('saveRoomInfo');
 if (btnSave) {
@@ -1930,3 +2012,48 @@ document.getElementById('btn-resolve-maint')?.addEventListener('click', function
     if (resolveContainer) resolveContainer.classList.add('hidden');
     document.getElementById('saveRoomInfo').click(); 
 });
+// --- ส่วนที่ 1: ตัวแปรควบคุม Quick Mode ---
+let quickModeActive = false;
+let selectedQuickStatus = '';
+
+// ฟังก์ชันเปิดโหมด Quick Update
+window.enableQuickMode = function() {
+    if (localStorage.getItem("isAdmin") !== "true") { 
+        alert("🔒 Staff only"); 
+        return; 
+    }
+    const statusBar = document.getElementById('quick-status-bar');
+    if (statusBar) statusBar.classList.remove('hidden');
+    
+    // สร้างปุ่มไอคอนตามหมวดหมู่ที่มีใน Settings
+    const container = document.getElementById('quick-tool-options');
+    if (container) {
+        const categories = getMaintenanceCategories(); 
+        container.innerHTML = '';
+        categories.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = `quick-tool-btn px-4 py-2 rounded-xl bg-white/5 text-white/70 text-xs font-bold hover:bg-white/10 transition-all border border-white/10 cursor-pointer flex items-center gap-2`;
+            btn.innerHTML = `<span>${cat.icon}</span> ${cat.name}`;
+            btn.onclick = () => {
+                quickModeActive = true;
+                selectedQuickStatus = cat.name;
+                // เปลี่ยนสีปุ่มที่ถูกเลือก
+                document.querySelectorAll('.quick-tool-btn').forEach(b => {
+                    b.classList.remove('bg-blue-600', 'text-white');
+                    b.classList.add('bg-white/5', 'text-white/70');
+                });
+                btn.classList.remove('bg-white/5', 'text-white/70');
+                btn.classList.add('bg-blue-600', 'text-white');
+            };
+            container.appendChild(btn);
+        });
+    }
+};
+
+// ฟังก์ชันปิดโหมด
+window.disableQuickMode = function() {
+    quickModeActive = false;
+    selectedQuickStatus = '';
+    const statusBar = document.getElementById('quick-status-bar');
+    if (statusBar) statusBar.classList.add('hidden');
+};
