@@ -1,282 +1,451 @@
 <!doctype html>
-<html lang="en">
+<html lang="th" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Room Status System - Andaman Beach Suites Hotel</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    body { font-family: 'Inter', sans-serif; }
-    /* Slide Animation easing */
-    .slider-track {
-      transition: transform 800ms cubic-bezier(0.4, 0, 0.2, 1);
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f9fafb;
+      color: #1f2937;
+    }
+
+    /* ================= HERO SECTION (SLIDE MODE) ================= */
+    .hero-section {
+      color: white;
+      text-align: center;
+      padding: 100px 20px 180px;
+      position: relative;
+      overflow: hidden;
+      min-height: 450px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .slider-container {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: flex;
+      width: 300%; 
+      height: 100%;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .slide {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+    }
+
+    .slide::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-section h1,
+    .hero-section p {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-section h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 15px rgba(0,0,0,0.5);
+    }
+
+    .hero-section p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+
+    /* ================= CARD SECTION ================= */
+    .card-section {
+      margin-top: -120px;
+      padding: 0 20px 100px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .building-card {
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+      padding: 50px 30px;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .building-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.1);
+    }
+
+    .building-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .building-a { background: linear-gradient(135deg, #7c3aed, #9333ea); }
+    .building-b { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+
+    .view-btn {
+      display: inline-block;
+      background: #7c3aed;
+      color: white;
+      border-radius: 12px;
+      padding: 10px 24px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: background 0.3s ease;
+    }
+
+    .view-btn:hover {
+      background: #6d28d9;
+    }
+
+    /* ================= 🔥 UPDATED LOGIN MODAL CSS 🔥 ================= */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-overlay.hidden { display: none; }
+
+    .modal-box {
+      background: white;
+      padding: 32px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      width: 360px;
+      text-align: center;
+      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* ================= RESPONSIVE FIXES ================= */
+    @media (max-width: 1024px) {
+      .hero-section {
+        padding: 80px 16px 140px;
+        min-height: 380px;
+      }
+
+      .hero-section h1 {
+        font-size: 2.6rem;
+      }
+
+      .card-section {
+        margin-top: -80px;
+        padding-bottom: 80px;
+      }
+
+      .building-card {
+        padding: 40px 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header.site-header .max-w-7xl {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      header.site-header img {
+        height: 56px;
+      }
+
+      .hero-section {
+        padding: 70px 16px 110px;
+        min-height: 320px;
+      }
+
+      .hero-section h1 {
+        font-size: 2.1rem;
+      }
+
+      .hero-section p {
+        font-size: 1rem;
+      }
+
+      .card-section {
+        margin-top: -40px;
+        padding: 0 16px 70px;
+      }
+
+      .building-card {
+        padding: 32px 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      header.site-header .max-w-7xl {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .hero-section h1 {
+        font-size: 1.9rem;
+      }
+
+      .building-icon {
+        width: 68px;
+        height: 68px;
+      }
     }
   </style>
 </head>
 
-<body class="min-h-screen bg-gray-50 text-gray-800">
+<body>
 
-  <header class="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+<header class="site-header sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    
+    <div class="flex items-center gap-4">
+      <img src="img/Hotel logo 2.png" alt="Logo" class="h-20 w-auto object-contain scale-110">
+      <div class="hidden sm:block border-l-2 border-slate-300 pl-4 py-1">
+        <h1 class="text-lg font-extrabold text-slate-800 tracking-tight leading-none">ANDAMAN BEACH SUITES HOTEL </h1>
+        <p class="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-bold mt-1">Room Status System</p>
+      </div>
+    </div>
+
+    <div class="hidden lg:flex items-center gap-8 text-slate-600">
       
-      <div class="flex items-center gap-4">
-        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-white text-3xl font-bold shadow-md">
-          🏨
-        </div>
-        <div class="hidden sm:block border-l-2 border-slate-300 pl-4 py-1">
-          <h1 class="text-lg font-extrabold text-slate-800 tracking-tight leading-none">
-            ANDAMAN BEACH SUITES HOTEL
-          </h1>
-          <p class="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-bold mt-1">
-            Room Status System
-          </p>
-        </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Local Time :</span>
+        <span id="liveTime" class="text-md font-mono font-bold text-slate-700">00:00:00</span>
       </div>
 
-      <div class="hidden lg:flex items-center gap-8 text-slate-600">
+      <div class="h-4 w-px bg-slate-300"></div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Server Status :</span>
         <div class="flex items-center gap-2">
-          <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Local Time :</span>
-          <span id="liveTime" class="text-md font-mono font-bold text-slate-700">00:00:00</span>
-        </div>
-        <div class="h-4 w-px bg-slate-300"></div>
-        <div class="flex items-center gap-2">
-          <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Server :</span>
           <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
           <span class="text-sm font-bold text-green-700">Active</span>
         </div>
       </div>
+      
+    </div>
 
-      <button id="adminBtn" class="flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black transition-all duration-300 group shadow-sm border-2 border-slate-800 text-slate-800 hover:bg-slate-800 hover:text-white">
+    <div class="flex items-center">
+      <button id="adminBtn" class="flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-slate-800 text-slate-800 text-xs font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm">
         <span id="btnText">STAFF LOGIN</span>
-        <svg id="iconLogin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transform group-hover:translate-x-1 transition-transform">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/>
-        </svg>
-        <svg id="iconCheck" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden">
-          <polyline points="20 6 9 17 4 12"/>
+        <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
         </svg>
       </button>
-
-    </div>
-  </header>
-
-  <section class="relative text-white text-center overflow-hidden min-h-[450px] flex flex-col justify-center items-center py-[100px] pb-[180px]">
-    
-    <div id="sliderTrack" class="absolute inset-0 z-0 flex h-full slider-track w-[300%]">
-      <div class="relative w-full h-full bg-cover bg-center flex-shrink-0" style="background-image: url('img/Andaman.jpg');">
-        <div class="absolute inset-0 bg-black/40"></div>
-      </div>
-      <div class="relative w-full h-full bg-cover bg-center flex-shrink-0" style="background-image: url('img/Andaman2.jpg');">
-        <div class="absolute inset-0 bg-black/40"></div>
-      </div>
-      <div class="relative w-full h-full bg-cover bg-center flex-shrink-0" style="background-image: url('img/Andaman3.jpg');">
-        <div class="absolute inset-0 bg-black/40"></div>
-      </div>
     </div>
 
-    <h1 class="relative z-10 text-[clamp(1.9rem,5vw,3.5rem)] font-extrabold mb-2.5 drop-shadow-[0_2px_15px_rgba(0,0,0,0.5)]">
-      Room Status System
-    </h1>
-    <p class="relative z-10 text-[clamp(1rem,2vw,1.2rem)] opacity-90">
-      Internal Room Management System
-    </p>
-  </section>
+  </div>
+</header>
 
-  <section class="relative z-10 -mt-[120px] px-5 pb-24">
-    <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-10">
-      
-      <div class="bg-white rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.08)] p-12 text-center transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_25px_50px_rgba(0,0,0,0.1)]">
-        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 mx-auto mb-5 flex items-center justify-center text-3xl font-bold text-white">
-          A
-        </div>
-        <h3 class="text-2xl font-bold mb-2 text-slate-800">Building A</h3>
-        <p class="text-slate-500 mb-6">Main Hotel Building • 104 Rooms</p>
-        <div class="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 mb-6 space-y-2">
-          <div class="flex justify-between">
-            <span>Total Floors</span>
-            <span class="font-semibold text-slate-900">9 Floors</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Rooms/Floor</span>
-            <span class="font-semibold text-slate-900">8 - 12 Rooms</span>
-          </div>
-        </div>
-        <a href="building-a.html" class="inline-block bg-violet-600 text-white rounded-xl px-6 py-2.5 font-semibold text-sm hover:bg-violet-700 transition-colors no-underline">
-          View Floor Plan →
-        </a>
-      </div>
-
-      <div class="bg-white rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.08)] p-12 text-center transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_25px_50px_rgba(0,0,0,0.1)]">
-        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 mx-auto mb-5 flex items-center justify-center text-3xl font-bold text-white">
-          B
-        </div>
-        <h3 class="text-2xl font-bold mb-2 text-slate-800">Building B</h3>
-        <p class="text-slate-500 mb-6">Annex Building • 40 Rooms</p>
-        <div class="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 mb-6 space-y-2">
-          <div class="flex justify-between">
-            <span>Total Floors</span>
-            <span class="font-semibold text-slate-900">4 Floors</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Rooms/Floor</span>
-            <span class="font-semibold text-slate-900">10 Rooms</span>
-          </div>
-        </div>
-        <a href="building-b.html" class="inline-block bg-violet-600 text-white rounded-xl px-6 py-2.5 font-semibold text-sm hover:bg-violet-700 transition-colors no-underline">
-          View Floor Plan →
-        </a>
-      </div>
-
-    </div>
-  </section>
-
-  <footer class="py-6 text-center text-sm text-slate-500 border-t border-slate-200">
-    © 2024 Andaman Beach Suites Hotel. All rights reserved.
-  </footer>
-
-  <div id="adminModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[1000] transition-opacity">
-    <div class="bg-white p-8 rounded-3xl shadow-2xl w-[360px] text-center transform scale-95 opacity-0 transition-all duration-300" id="modalBox">
-      
-      <div class="mb-6">
-        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </div>
-        <h2 class="text-2xl font-bold text-slate-800">Staff Login</h2>
-        <p class="text-sm text-slate-500 mt-1">Please enter passcode to access</p>
-      </div>
-      
-      <input type="password" id="adminPassword" placeholder="Passcode (1234)" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-blue-500 text-center text-xl tracking-[0.3em] font-mono transition-all" />
-      
-      <div class="flex gap-3">
-        <button id="loginCancel" class="flex-1 bg-white border border-slate-200 text-slate-600 px-4 py-3 rounded-xl hover:bg-slate-50 font-bold transition-colors">Cancel</button>
-        <button id="loginConfirm" class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-xl hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 transition-all transform active:scale-95">Confirm</button>
-      </div>
-
-    </div>
+<section class="hero-section">
+  <div id="sliderTrack" class="slider-container">
+    <div class="slide" style="background-image: url('img/Andaman.jpg');"></div>
+    <div class="slide" style="background-image: url('img/Andaman2.jpg');"></div>
+    <div class="slide" style="background-image: url('img/Andaman3.jpg');"></div>
   </div>
 
-  <script>
-    // 1. นาฬิกาแบบ Real-time
-    function updateClock() {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const timeElement = document.getElementById('liveTime');
-      if (timeElement) timeElement.textContent = timeStr;
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+  <h1>Room Status System</h1>
+  <p>Internal Room Management System</p>
+</section>
 
-    // 2. ระบบจัดการ Hero Slider
-    let currentSlide = 0;
-    const totalSlides = 3; // จำนวนรูปในสไลด์
-    const sliderTrack = document.getElementById("sliderTrack");
+<section class="card-section">
+  <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-10">
+    <div class="building-card">
+      <div class="building-icon building-a">A</div>
+      <h3 class="text-2xl font-bold mb-2">ABSH</h3>
+      <p class="text-slate-500 mb-6">Building A • 104 Rooms</p>
+      <div class="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 mb-6">
+        <div class="flex justify-between"><span>Total Floors</span><span class="font-semibold text-slate-900">9 Floors</span></div>
+        <div class="flex justify-between"><span>Rooms/Floor</span><span class="font-semibold text-slate-900">8 Rooms</span></div>
+      </div>
+      <a href="building-a.html" class="view-btn">View Floor Plan →</a>
+    </div>
 
-    setInterval(() => {
-      currentSlide = (currentSlide + 1) % totalSlides;
-      // ขยับ track ไปทางซ้ายทีละ 33.333% (เพราะกว้าง 300%)
-      const offset = currentSlide * (100 / totalSlides);
-      sliderTrack.style.transform = `translateX(-${offset}%)`;
-    }, 3000);
+    <div class="building-card">
+      <div class="building-icon building-b">B</div>
+      <h3 class="text-2xl font-bold mb-2">ABSC</h3>
+      <p class="text-slate-500 mb-6">Building B • 40 Rooms</p>
+      <div class="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 mb-6">
+        <div class="flex justify-between"><span>Total Floors</span><span class="font-semibold text-slate-900">4 Floors</span></div>
+        <div class="flex justify-between"><span>Rooms/Floor</span><span class="font-semibold text-slate-900">10 Rooms</span></div>
+      </div>
+      <a href="building-b.html" class="view-btn">View Floor Plan →</a>
+    </div>
+  </div>
+</section>
+ 
+<footer class="py-6 text-center text-sm text-slate-500 border-t">
+  © Andaman Beach Suites Hotel
+</footer>
 
-    // 3. ระบบจัดการ Admin Modal & UI
-    const adminBtn = document.getElementById("adminBtn");
-    const btnText = document.getElementById("btnText");
-    const iconLogin = document.getElementById("iconLogin");
-    const iconCheck = document.getElementById("iconCheck");
+<div id="adminModal" class="modal-overlay hidden">
+  <div class="modal-box">
     
-    const modal = document.getElementById("adminModal");
-    const modalBox = document.getElementById("modalBox");
-    const passInput = document.getElementById("adminPassword");
-    const loginBtn = document.getElementById("loginConfirm");
-    const cancelBtn = document.getElementById("loginCancel");
+    <div class="mb-6">
+        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800">Staff Login</h2>
+        <p class="text-sm text-slate-500 mt-1">Please enter passcode to access</p>
+    </div>
+    
+    <input type="password" id="adminPassword" placeholder="Passcode (1234)" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl mb-5 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-center text-lg tracking-widest transition-all" />
+    
+    <div class="modal-actions flex gap-3">
+      <button id="loginCancel" class="flex-1 bg-white border border-slate-200 text-slate-600 px-4 py-3 rounded-xl hover:bg-slate-50 font-semibold transition-colors">Cancel</button>
+      <button id="loginConfirm" class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-xl hover:bg-blue-700 font-semibold shadow-lg shadow-blue-500/30 transition-all transform active:scale-95">Confirm</button>
+    </div>
 
-    const ADMIN_PASSWORD = "1234";
+  </div>
+</div>
 
-    // อัปเดตปุ่มตามสถานะ
-    function updateAdminUI() {
-      const isAdmin = localStorage.getItem("isAdmin") === "true";
-      
-      if (isAdmin) {
-        btnText.textContent = "ADMIN ACTIVE";
-        adminBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black transition-all duration-300 group shadow-sm bg-green-600 border-2 border-green-600 text-white hover:bg-green-700";
-        iconLogin.classList.add("hidden");
-        iconCheck.classList.remove("hidden");
-      } else {
-        btnText.textContent = "STAFF LOGIN";
-        adminBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black transition-all duration-300 group shadow-sm border-2 border-slate-800 text-slate-800 hover:bg-slate-800 hover:text-white";
-        iconLogin.classList.remove("hidden");
-        iconCheck.classList.add("hidden");
-      }
-    }
+<script>
+  // --- 1. Real-time Clock ---
+  function updateClock() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeElement = document.getElementById('liveTime');
+    if(timeElement) timeElement.textContent = timeStr;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
 
-    function openModal() {
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-      // หน่วงเวลาให้เกิด Animation
-      setTimeout(() => {
-        modalBox.classList.remove("scale-95", "opacity-0");
-        modalBox.classList.add("scale-100", "opacity-100");
-        passInput.value = "";
-        passInput.focus();
-      }, 10);
-    }
+  // --- 2. Hero Slider Logic ---
+  let currentIndex = 0;
+  const totalSlides = 3;
+  const sliderTrack = document.getElementById("sliderTrack");
 
-    function closeModal() {
-      modalBox.classList.remove("scale-100", "opacity-100");
-      modalBox.classList.add("scale-95", "opacity-0");
-      setTimeout(() => {
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-      }, 300); // รอ Animation จบ
-    }
+  function slideToNext() {
+    currentIndex = (currentIndex + 1) % totalSlides;
+    const offset = currentIndex * (100 / totalSlides);
+    sliderTrack.style.transform = `translateX(-${offset}%)`;
+  }
+  setInterval(slideToNext, 3000);
 
-    // จัดการเมื่อคลิกปุ่ม Admin / Staff Login
-    adminBtn.addEventListener("click", () => {
+  // --- 3. Admin & Modal Logic (With Green Button) ---
+  const adminBtn = document.getElementById("adminBtn");
+  const btnText = document.getElementById("btnText");
+  const modal = document.getElementById("adminModal");
+  const passInput = document.getElementById("adminPassword");
+  const loginBtn = document.getElementById("loginConfirm");
+  const cancelBtn = document.getElementById("loginCancel");
+
+  const ADMIN_PASSWORD = "1234";
+
+  function checkLoginStatus() {
       if (localStorage.getItem("isAdmin") === "true") {
-        if (confirm("คุณต้องการออกจากระบบ Admin ใช่หรือไม่?")) {
-          localStorage.removeItem("isAdmin");
-          updateAdminUI();
-        }
-      } else {
-        openModal();
+          setAdminState();
       }
-    });
+  }
 
-    // ยืนยันรหัสผ่าน
-    loginBtn.addEventListener("click", () => {
-      if (passInput.value === ADMIN_PASSWORD) {
-        localStorage.setItem("isAdmin", "true");
-        updateAdminUI();
-        closeModal();
-      } else {
-        alert("รหัสผ่านไม่ถูกต้อง ❌");
+  // 🔥 สถานะ Admin: ปุ่มสีเขียว 🔥
+  function setAdminState() {
+      btnText.textContent = "ADMIN ACTIVE";
+      // เปลี่ยน Class เป็นสีเขียว (bg-green-600, border-green-600)
+      adminBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-full bg-green-600 border-2 border-green-600 text-white text-xs font-black hover:bg-green-700 transition-all duration-300 group shadow-sm";
+      
+      // เปลี่ยน icon เป็นติ๊กถูก หรือ Login ค้างไว้ (Optional)
+      const icon = document.getElementById("btnIcon");
+      if(icon) {
+          icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
+          icon.classList.remove("group-hover:translate-x-1"); // หยุดขยับ
+      }
+  }
+
+  // 🔥 สถานะ Guest: ปุ่มขาวขอบดำเดิม 🔥
+  function setGuestState() {
+      btnText.textContent = "STAFF LOGIN";
+      // คืนค่า Class เดิม
+      adminBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-slate-800 text-slate-800 text-xs font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm";
+      
+      // คืนค่า icon ลูกศร
+      const icon = document.getElementById("btnIcon");
+      if(icon) {
+          icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />';
+          icon.classList.add("group-hover:translate-x-1");
+      }
+  }
+
+  adminBtn.addEventListener("click", () => {
+    if (localStorage.getItem("isAdmin") === "true") {
+        if(confirm("Log out of Admin?")) {
+            localStorage.removeItem("isAdmin");
+            setGuestState();
+        }
+    } else {
+        modal.classList.remove("hidden");
         passInput.value = "";
         passInput.focus();
-      }
-    });
+    }
+  });
 
-    // กด Enter เพื่อล็อกอิน
-    passInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") loginBtn.click();
-    });
+  loginBtn.addEventListener("click", () => {
+    if (passInput.value === ADMIN_PASSWORD) {
+      localStorage.setItem("isAdmin", "true");
+      setAdminState();
+      modal.classList.add("hidden");
+      alert("Admin mode enabled ✅");
+    } else {
+      alert("Incorrect password ❌");
+    }
+  });
 
-    // ยกเลิก และปิด Modal
-    cancelBtn.addEventListener("click", closeModal);
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeModal();
-    });
+  passInput.addEventListener("keypress", (e) => {
+      if(e.key === "Enter") loginBtn.click();
+  });
 
-    // Sync สถานะตอนเปิดหน้าเว็บ
-    window.addEventListener("storage", (e) => {
-      if (e.key === "isAdmin") updateAdminUI();
-    });
-    
-    updateAdminUI();
+  cancelBtn.addEventListener("click", () => modal.classList.add("hidden"));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
 
-  </script>
+  if (localStorage.getItem("showLoginModal") === "true") {
+      localStorage.removeItem("showLoginModal");
+      modal.classList.remove("hidden");
+      passInput.value = "";
+      passInput.focus();
+  }
+
+  window.addEventListener("storage", (e) => {
+      if (e.key === "isAdmin") checkLoginStatus();
+  });
+
+  checkLoginStatus();
+
+</script>
+
 </body>
 </html>
