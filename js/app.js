@@ -1106,47 +1106,6 @@ function renderServiceSidebar() {
     });
 }
 
-function toggleFilter(filterName) {
-    const target = filterName.trim();
-    if (activeFilters.has(target)) activeFilters.delete(target); else activeFilters.add(target);
-    const allRooms = getRoomElements();
-    document.body.classList.toggle('show-filter-icons', activeFilters.size > 0);
-
-    const categories = (() => {
-        try { return JSON.parse(localStorage.getItem('maint_cats_final_v1')) || []; } catch { return []; }
-    })();
-    const iconMap = new Map(categories.map(c => [c.name.trim(), c.icon]));
-
-    allRooms.forEach(room => {
-        // remove only filter-related markers/icons, keep any existing classes/background-color
-        room.querySelectorAll('.filter-icon').forEach(el => el.remove());
-        room.querySelectorAll('.maint-icon').forEach(el => el.remove());
-    });
-
-    if (activeFilters.size === 0) {
-        // No active filters: restore room colors/state from DB/local storage
-        // instead of leaving inline styles cleared.
-        try { applySavedRoomStates(); } catch (e) {}
-        try { applyRoomStatesFromDb(); } catch (e) {}
-        return;
-    }
-
-    // First, mark matches and non-matches (do not touch inline background-color)
-    allRooms.forEach(room => {
-        const rawMaint = room.getAttribute('data-maint') || "";
-        const cleanMaint = rawMaint.trim();
-        const isMatch = activeFilters.has(cleanMaint) || activeFilters.has(rawMaint);
-        if (isMatch) {
-            const icon = iconMap.get(cleanMaint) || iconMap.get(rawMaint) || "🔧";
-            // add filter icons/maint icons for matches only (do not dim or highlight)
-            room.insertAdjacentHTML('beforeend', `<span class="filter-icon" aria-hidden="true">${icon}</span>`);
-            const note = (room.getAttribute('data-maint-note') || '').trim();
-            const label = note ? `Task: ${note}` : 'Task: Unspecified';
-            room.insertAdjacentHTML('beforeend', `<div class="maint-icon" data-info="${label}">${icon}</div>`);
-        }
-    });
-}
-
 // Edit Modal Functions (Admin)
 async function openEditModal(roomElement) {
     currentEditingRoom = roomElement;
