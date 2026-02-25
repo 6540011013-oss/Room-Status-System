@@ -1649,7 +1649,8 @@ body {
         justify-content: center !important;
         height: var(--print-page-h, 100vh) !important;
     }
-    body.print-report .building {
+    body.print-report .building,
+    body.print-report .building-plan {
         transform-origin: top left !important;
         transform: translate(var(--print-rotate-tx, 0px), var(--print-rotate-ty, 0px)) rotate(-90deg) scale(var(--print-rotate-scale, 1)) !important;
         font-family: 'Inter','Segoe UI Symbol','Noto Sans Symbols',sans-serif;
@@ -1728,6 +1729,16 @@ body {
     body.print-report .dashboard-table td {
         padding: 6px 5px;
         font-size: 11px;
+    }
+    /* Print mode: flip table row flow (bottom-to-top) */
+    body.print-report .dashboard-table tbody {
+        display: flex;
+        flex-direction: column-reverse;
+    }
+    body.print-report .dashboard-table tbody tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
     }
 }
 
@@ -2387,6 +2398,25 @@ body {
     opacity: 1;
 }
 
+/* Resolved mark: show at right side inside room */
+.resolved-thumb {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 25;
+}
+
 /* Filter highlight icon (top-left) */
 .filter-icon {
     position: absolute;
@@ -2604,7 +2634,11 @@ html body .room-active-highlight.type-condo { background: #FFFF00 !important; }
 html body .room-active-highlight.type-suc { background: #e3e3e3 !important; }
 
 /* 4. ล้างค่าขยะ */
-.is-dimmed-force { display: none !important; }
+.is-dimmed-force {
+    opacity: 0.08 !important;
+    filter: grayscale(100%) !important;
+    pointer-events: none !important;
+}
 
 
 
@@ -3117,6 +3151,22 @@ body {
     padding-right: clamp(8px, 0.8vw, 12px) !important;
 }
 
+.service-count-main {
+    font-size: clamp(0.76rem, 0.9vw, 1rem);
+    line-height: 1.1;
+    font-weight: 900;
+}
+
+.service-count-sub {
+    margin-top: 2px;
+    font-size: clamp(0.44rem, 0.55vw, 0.56rem);
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    opacity: 0.95;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 @media (max-width: 1024px) {
     .legend-block {
         width: min(100%, 600px) !important;
@@ -3140,4 +3190,307 @@ body {
     font-weight: 700;
     color: white;
     letter-spacing: 0.5px;
+}
+
+/* Building A: keep side panels off the plan area (desktop) */
+@media (min-width: 1025px) {
+    body .plan-wrapper {
+        padding-left: 280px !important;
+        padding-right: 280px !important;
+    }
+
+    body .legend-block {
+        position: fixed !important;
+        top: 96px !important;
+        width: 240px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+        z-index: 3500 !important;
+    }
+
+    body .legend-block.left-info-panel {
+        left: 16px !important;
+        right: auto !important;
+    }
+
+    body .legend-block.main-legend {
+        right: 16px !important;
+        left: auto !important;
+    }
+}
+
+/* Service Status panel style (match visual mock) */
+.legend-block.left-info-panel {
+    background: #f5f5f7 !important;
+    border: 1px solid #e7e7ee !important;
+    border-radius: 20px !important;
+    padding: 14px !important;
+    box-shadow: 0 12px 28px rgba(20, 22, 40, 0.08) !important;
+    overflow: hidden !important;
+}
+
+.legend-block.left-info-panel > .flex.items-center.justify-between.mb-3 {
+    margin-bottom: 8px !important;
+}
+
+.legend-block.left-info-panel > .flex.items-center.justify-between.mb-3 h4 {
+    letter-spacing: 0.24em !important;
+    font-size: 0.84rem !important;
+    font-weight: 700 !important;
+    color: #1f2a4b !important;
+}
+
+.service-status-v2 {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+.service-v2-title {
+    font-size: 1.88rem;
+    font-weight: 800;
+    color: #1a2551;
+    line-height: 1.08;
+}
+
+.service-v2-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.service-v2-kpi {
+    border: 1px solid #e7e8ef;
+    border-radius: 14px;
+    background: #f7f8fb;
+    min-height: 70px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 2px;
+}
+
+.service-v2-kpi-num {
+    font-size: 1.82rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.service-v2-kpi-lbl {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+}
+
+.service-v2-kpi--pending { border-color: #f1d5d2; }
+.service-v2-kpi--pending .service-v2-kpi-num,
+.service-v2-kpi--pending .service-v2-kpi-lbl { color: #ec5c50; }
+.service-v2-kpi--resolved { border-color: #c7e7dc; background: #e5f2ee; }
+.service-v2-kpi--resolved .service-v2-kpi-num,
+.service-v2-kpi--resolved .service-v2-kpi-lbl { color: #2ea56e; }
+.service-v2-kpi--total { border-color: #dfd0f6; }
+.service-v2-kpi--total .service-v2-kpi-num,
+.service-v2-kpi--total .service-v2-kpi-lbl { color: #8d34e0; }
+
+.service-v2-detail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2px;
+}
+
+.service-v2-detail-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #27344f;
+}
+
+.service-v2-highlight-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.76rem;
+    color: #5c6680;
+    font-weight: 700;
+}
+
+.service-v2-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    display: inline-block;
+}
+
+.service-v2-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.service-v2-switch i {
+    position: absolute;
+    inset: 0;
+    background: #dddfe7;
+    border-radius: 999px;
+    transition: 0.2s ease;
+}
+
+.service-v2-switch i::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.16);
+    transition: 0.2s ease;
+}
+
+.service-v2-switch input:checked + i {
+    background: #5f6ddf;
+}
+
+.service-v2-switch input:checked + i::before {
+    transform: translateX(18px);
+}
+
+.service-v2-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.service-v2-item {
+    width: 100%;
+    border: 0;
+    border-radius: 14px;
+    padding: 11px 12px;
+    text-align: left;
+    background: #eff1f6;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.service-v2-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(30, 41, 59, 0.08);
+}
+
+.service-v2-item.is-active {
+    box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.9);
+}
+
+.service-v2-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.service-v2-item-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.service-v2-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 1.2rem;
+}
+
+.service-v2-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #1f2a4b;
+    white-space: nowrap;
+}
+
+.service-v2-pending {
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.service-v2-progress-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: #dde0e8;
+    margin-top: 7px;
+    overflow: hidden;
+}
+
+.service-v2-progress-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+}
+
+.service-v2-item-meta {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.service-v2-item.tone-blue .service-v2-icon-box { background: #d8e4fb; color: #4e78d7; }
+.service-v2-item.tone-blue .service-v2-pending,
+.service-v2-item.tone-blue .service-v2-item-meta span:last-child { color: #4e78d7; }
+.service-v2-item.tone-blue .service-v2-progress-fill { background: #4e78d7; }
+
+.service-v2-item.tone-amber .service-v2-icon-box { background: #f1e5cb; color: #e6a71f; }
+.service-v2-item.tone-amber .service-v2-pending,
+.service-v2-item.tone-amber .service-v2-item-meta span:last-child { color: #e6a71f; }
+.service-v2-item.tone-amber .service-v2-progress-fill { background: #e6a71f; }
+
+.service-v2-item.tone-violet .service-v2-icon-box { background: #ece0f4; color: #8a2ecb; }
+.service-v2-item.tone-violet .service-v2-pending,
+.service-v2-item.tone-violet .service-v2-item-meta span:last-child { color: #8a2ecb; }
+.service-v2-item.tone-violet .service-v2-progress-fill { background: #8a2ecb; }
+
+.service-v2-item.tone-slate .service-v2-icon-box { background: #e2e8f0; color: #64748b; }
+.service-v2-item.tone-slate .service-v2-pending,
+.service-v2-item.tone-slate .service-v2-item-meta span:last-child { color: #64748b; }
+.service-v2-item.tone-slate .service-v2-progress-fill { background: #64748b; }
+
+@media (max-width: 640px) {
+    .legend-block.left-info-panel {
+        border-radius: 18px !important;
+        padding: 12px !important;
+    }
+
+    .service-v2-title {
+        font-size: 1.74rem;
+    }
+
+    .service-v2-kpi {
+        min-height: 66px;
+    }
+
+    .service-v2-kpi-num {
+        font-size: 1.72rem;
+    }
+
+    .service-v2-name {
+        font-size: 0.98rem;
+    }
+
+    .service-v2-pending {
+        font-size: 0.78rem;
+    }
+
+    .service-v2-item-meta {
+        font-size: 0.68rem;
+    }
 }

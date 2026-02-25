@@ -5,7 +5,7 @@
   <title>Building A</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260225h">
   <script src="https://cdn.tailwindcss.com"></script>
   <style type="text/tailwindcss">
     @keyframes slideIn {
@@ -22,9 +22,55 @@
     .plan-wrapper {
         display: flex;
         justify-content: center;
+        align-items: flex-start;
         width: 100%;
         position: relative;
-        padding-bottom: 20px;
+        padding-top: 16px;
+        padding-bottom: 24px;
+        padding-left: clamp(250px, 22vw, 320px) !important;
+        padding-right: clamp(250px, 22vw, 320px) !important;
+        box-sizing: border-box;
+        overflow: visible;
+    }
+
+    .legend-block.main-legend {
+        position: fixed !important;
+        top: 96px !important;
+        right: 16px !important;
+        left: auto !important;
+        width: 240px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+        z-index: 4000 !important;
+    }
+
+    .legend-block.left-info-panel {
+        position: fixed !important;
+        top: 96px !important;
+        left: 16px !important;
+        right: auto !important;
+        width: 240px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+        z-index: 4000 !important;
+    }
+
+    @media (max-width: 1024px) {
+        .plan-wrapper {
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+        }
+
+        .legend-block.main-legend,
+        .legend-block.left-info-panel {
+            position: static !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            width: min(100%, 560px) !important;
+            max-height: none !important;
+            margin: 0 auto 12px !important;
+        }
     }
 
     /* ========== DASHBOARD STYLES (CANVA REPLICA) ========== */
@@ -257,12 +303,12 @@
     </div>
 
   <div class="legend-block left-info-panel">
-    <h4 class="text-sm font-bold text-gray-800 mb-3 border-b pb-2 uppercase tracking-wider">Service Status</h4>
-
-    
-    
-    <div id="service-sidebar-list" class="flex flex-col gap-3">
-        </div>
+  <div class="flex items-center justify-between mb-3">
+    <h4 class="text-sm font-bold text-gray-800 uppercase tracking-wider m-0">Service Status</h4>
+  </div>
+  
+  <div id="service-sidebar-list" class="flex flex-col gap-3">
+    </div>
 </div>
 <div class="floor small">
         <div class="room type-condo half flex items-center justify-center relative" data-room-id="2101-F2">
@@ -1148,6 +1194,6 @@ function refreshServiceSidebar() {
         }
     })();
 </script>
-<script src="js/app.js?v=20260210"></script>
+<script src="js/app.js?v=20260225i"></script>
 </body>
 </html>

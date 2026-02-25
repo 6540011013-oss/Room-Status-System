@@ -610,6 +610,90 @@ function getMaintIconByName(maintName) {
     return found ? found.icon : null;
 }
 
+function readMaintTaskLog() {
+    try {
+        return JSON.parse(localStorage.getItem(MAINT_TASK_LOG_KEY)) || [];
+    } catch {
+        return [];
+    }
+}
+
+function getTaskStateOnDate(task, dateISO, todayISO) {
+    const reportedDate = String(task?.reportedDate || '').trim();
+    const resolvedDate = String(task?.resolvedDate || '').trim();
+    const status = String(task?.status || 'pending').trim();
+    if (!reportedDate || !dateISO) return null;
+    if (dateISO < reportedDate) return null;
+
+    if (status === 'pending') {
+        return (dateISO <= todayISO) ? 'pending' : null;
+    }
+
+    if (status === 'resolved') {
+        if (!resolvedDate) return (dateISO <= todayISO) ? 'pending' : null;
+        if (dateISO < resolvedDate) return 'pending';
+        return 'resolved';
+    }
+
+    return null;
+}
+
+function getMaintenanceSnapshotStats() {
+    const todayISO = getTodayLocal();
+    const log = readMaintTaskLog();
+    const pendingByType = new Map();
+    const resolvedByType = new Map();
+    const resolvedRoomIds = new Set();
+
+    log.forEach(task => {
+        const type = String(task?.type || '').trim();
+        const roomId = String(task?.roomId || '').trim();
+        if (!type || !roomId) return;
+
+        const state = getTaskStateOnDate(task, selectedSnapshotDate, todayISO);
+        if (!state) return;
+
+        if (state === 'pending') {
+            pendingByType.set(type, (pendingByType.get(type) || 0) + 1);
+            return;
+        }
+
+        resolvedByType.set(type, (resolvedByType.get(type) || 0) + 1);
+        resolvedRoomIds.add(roomId);
+    });
+
+    // Safety net: if today's room has active maint but no log yet, count as pending.
+    if (selectedSnapshotDate === todayISO) {
+        getRoomElements().forEach(room => {
+            const type = String(room.getAttribute('data-maint') || '').trim();
+            const roomId = String(getRoomId(room) || '').trim();
+            if (!type || !roomId) return;
+
+            const hasPendingInLog = log.some(task =>
+                String(task?.roomId || '').trim() === roomId &&
+                String(task?.type || '').trim() === type &&
+                getTaskStateOnDate(task, selectedSnapshotDate, todayISO) === 'pending'
+            );
+            if (!hasPendingInLog) {
+                pendingByType.set(type, (pendingByType.get(type) || 0) + 1);
+            }
+        });
+    }
+
+    return { pendingByType, resolvedByType, resolvedRoomIds };
+}
+
+function renderResolvedThumbs() {
+    const { resolvedRoomIds } = getMaintenanceSnapshotStats();
+    const rooms = getRoomElements();
+    rooms.forEach(room => {
+        room.querySelectorAll('.resolved-thumb').forEach(el => el.remove());
+        const roomId = String(getRoomId(room) || '').trim();
+        if (!roomId || !resolvedRoomIds.has(roomId)) return;
+        room.insertAdjacentHTML('beforeend', '<div class="resolved-thumb" title="Resolved">👍</div>');
+    });
+}
+
 window.resolveMaintTaskFromDashboard = function(taskId) {
     if (!taskId) return;
     if (selectedSnapshotDate !== getTodayLocal()) {
@@ -1000,14 +1084,23 @@ function initImagePicker() {
 
     fileInput.addEventListener('change', (e) => handleFile(e.target.files && e.target.files[0]));
 
-    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('click', (e) => {
+        if (e.target && e.target.closest && e.target.closest('#image-pick-btn')) return;
+        fileInput.click();
+    });
     dropzone.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             fileInput.click();
         }
     });
-    if (pickBtn) pickBtn.addEventListener('click', (e) => { e.preventDefault(); fileInput.click(); });
+    if (pickBtn) {
+        pickBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
 
     const setDragState = (on) => dropzone.classList.toggle('is-dragover', on);
     ['dragenter', 'dragover'].forEach(evt => {
@@ -1082,27 +1175,129 @@ function renderServiceSidebar() {
     const sidebarContainer = document.getElementById('service-sidebar-list');
     if (!sidebarContainer) return;
     const categories = JSON.parse(localStorage.getItem('maint_cats_final_v1')) || [];
+    const stats = getMaintenanceSnapshotStats();
+    sidebarContainer.innerHTML = '';
+
+    const totalPending = Array.from(stats.pendingByType.values()).reduce((sum, n) => sum + n, 0);
+    const totalResolved = Array.from(stats.resolvedByType.values()).reduce((sum, n) => sum + n, 0);
+    const totalTasks = totalPending + totalResolved;
+    const highlightOn = document.body.classList.contains('highlight-mode-active');
+
+    const panel = document.createElement('div');
+    panel.className = 'service-status-v2';
+    panel.innerHTML = `
+        <div class="service-v2-kpis">
+            <div class="service-v2-kpi service-v2-kpi--pending">
+                <div class="service-v2-kpi-num">${totalPending}</div>
+                <div class="service-v2-kpi-lbl">PENDING</div>
+            </div>
+            <div class="service-v2-kpi service-v2-kpi--resolved">
+                <div class="service-v2-kpi-num">${totalResolved}</div>
+                <div class="service-v2-kpi-lbl">RESOLVED</div>
+            </div>
+            <div class="service-v2-kpi service-v2-kpi--total">
+                <div class="service-v2-kpi-num">${totalTasks}</div>
+                <div class="service-v2-kpi-lbl">TOTAL</div>
+            </div>
+        </div>
+        <div class="service-v2-detail-head">
+            <span class="service-v2-detail-label">รายละเอียด</span>
+            <label class="service-v2-highlight-toggle">
+                <span>Highlight</span>
+                <span class="service-v2-switch">
+                    <input type="checkbox" id="highlightToggle" ${highlightOn ? 'checked' : ''} onchange="toggleHighlightMode(this.checked)">
+                    <i></i>
+                </span>
+            </label>
+        </div>
+        <div class="service-v2-list"></div>
+    `;
+
+    const list = panel.querySelector('.service-v2-list');
+    const tones = ['blue', 'amber', 'violet'];
+
+    categories.forEach((cat, index) => {
+        const pendingCount = stats.pendingByType.get(cat.name) || 0;
+        const resolvedCount = stats.resolvedByType.get(cat.name) || 0;
+        const totalByType = pendingCount + resolvedCount;
+        const resolvedPercent = totalByType > 0 ? Math.round((resolvedCount / totalByType) * 100) : 0;
+        const tone = tones[index] || 'slate';
+
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = `service-v2-item tone-${tone}${activeFilters.has(cat.name.trim()) ? ' is-active' : ''}`;
+        item.innerHTML = `
+            <div class="service-v2-item-top">
+                <div class="service-v2-item-left">
+                    <span class="service-v2-icon-box">${cat.icon}</span>
+                    <span class="service-v2-name">${cat.name}</span>
+                </div>
+                <span class="service-v2-pending">${pendingCount} pending</span>
+            </div>
+            <div class="service-v2-progress-track">
+                <span class="service-v2-progress-fill" style="width:${resolvedPercent}%"></span>
+            </div>
+            <div class="service-v2-item-meta">
+                <span>แก้ไขแล้ว ${resolvedCount}/${totalByType}</span>
+                <span>${resolvedPercent}%</span>
+            </div>
+        `;
+        item.onclick = () => { toggleFilter(cat.name.trim()); renderServiceSidebar(); };
+        list.appendChild(item);
+    });
+
+    sidebarContainer.appendChild(panel);
+
+    renderResolvedThumbs();
+}
+
+function toggleFilter(filterName) {
+    const target = filterName.trim();
+
+    if (activeFilters.has(target)) {
+        activeFilters.delete(target);
+    } else {
+        activeFilters.add(target);
+    }
+    applyActiveFiltersToRooms();
+}
+
+function applyActiveFiltersToRooms() {
     const allRooms = getRoomElements();
-    sidebarContainer.innerHTML = ''; 
+    document.body.classList.toggle('show-filter-icons', activeFilters.size > 0);
+    applyHighlightEffect();
+    const categories = (() => {
+        try { return JSON.parse(localStorage.getItem('maint_cats_final_v1')) || []; } catch { return []; }
+    })();
+    const iconMap = new Map(categories.map(c => [c.name.trim(), c.icon]));
 
-    categories.forEach(cat => {
-        const count = Array.from(allRooms).filter(room => room.getAttribute('data-maint') === cat.name).length;
-        const card = document.createElement('div');
-        let colorTheme = { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-500', badge: 'bg-slate-400' };
+    allRooms.forEach(room => {
+        // remove only filter-related markers/icons, keep any existing classes/background-color
+        room.querySelectorAll('.filter-icon').forEach(el => el.remove());
+        room.querySelectorAll('.maint-icon').forEach(el => el.remove());
+    });
 
-        if (cat.icon === '📶') colorTheme = { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', badge: 'bg-blue-600' };
-        else if (cat.icon === '❄️') colorTheme = { bg: 'bg-purple-50', border: 'border-purple-300', text: 'text-purple-700', badge: 'bg-purple-600' };
-        else if (cat.icon === '🧹') colorTheme = { bg: 'bg-pink-50', border: 'border-pink-300', text: 'text-pink-700', badge: 'bg-pink-600' };
-        else if (cat.icon === '🔧' || cat.icon === '⚡') colorTheme = { bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-800', badge: 'bg-yellow-600' };
+    if (activeFilters.size === 0) {
+        // No active filters: restore room colors/state from DB/local storage
+        // instead of leaving inline styles cleared.
+        try { applySavedRoomStates(); } catch (e) {}
+        try { applyRoomStatesFromDb(); } catch (e) {}
+        return;
+    }
 
-        if (activeFilters.has(cat.name.trim())) {
-            colorTheme.bg = 'bg-orange-100'; colorTheme.border = 'border-orange-500'; colorTheme.text = 'text-orange-700'; colorTheme.badge = 'bg-orange-600';
+    // First, mark matches and non-matches (do not touch inline background-color)
+    allRooms.forEach(room => {
+        const rawMaint = room.getAttribute('data-maint') || "";
+        const cleanMaint = rawMaint.trim();
+        const isMatch = activeFilters.has(cleanMaint) || activeFilters.has(rawMaint);
+        if (isMatch) {
+            const icon = iconMap.get(cleanMaint) || iconMap.get(rawMaint) || "🔧";
+            // add filter icons/maint icons for matches only (do not dim or highlight)
+            room.insertAdjacentHTML('beforeend', `<span class="filter-icon" aria-hidden="true">${icon}</span>`);
+            const note = (room.getAttribute('data-maint-note') || '').trim();
+            const label = note ? `Task: ${note}` : 'Task: Unspecified';
+            room.insertAdjacentHTML('beforeend', `<div class="maint-icon" data-info="${label}">${icon}</div>`);
         }
-
-        card.className = `filter-card-mini ${colorTheme.bg} ${colorTheme.border} ${colorTheme.text} p-4 rounded-2xl border-2 flex items-center justify-between transition-all duration-300 mb-3 shadow-sm hover:translate-x-1 cursor-pointer`;
-        card.innerHTML = `<div class="flex items-center gap-4"><span class="service-icon filter drop-shadow-sm">${cat.icon}</span><div class="flex flex-col text-left"><span class="service-name font-extrabold uppercase tracking-tight text-slate-700">${cat.name}</span></div></div><div class="service-count ${colorTheme.badge} text-white font-black px-3 py-0.5 rounded-xl min-w-[35px] text-center shadow-inner">${count}</div>`;
-        card.onclick = () => { toggleFilter(cat.name.trim()); renderServiceSidebar(); };
-        sidebarContainer.appendChild(card);
     });
 }
 
@@ -1429,7 +1624,8 @@ if (btnSave) {
         }
 
         if (activeFilters.size > 0) {
-            toggleFilter(Array.from(activeFilters)[0]);
+            applyActiveFiltersToRooms();
+            renderServiceSidebar();
         }
     };
 }
@@ -1543,6 +1739,7 @@ if (btnSave) {
                 else room.style.setProperty('background-color', 'transparent', 'important');
             } else {
                 room.style.setProperty('background-color', 'transparent', 'important');
+                applyHighlightEffect();
             }
         });
     }
@@ -1691,12 +1888,101 @@ if (btnSave) {
             return;
         }
 
-        document.querySelectorAll('.maint-icon.is-open, .ap-badge.is-open').forEach(el => el.classList.remove('is-open'));
+    document.querySelectorAll('.maint-icon.is-open, .ap-badge.is-open').forEach(el => el.classList.remove('is-open'));
     }, true);
+
+    // Move side panels out of transformed plan so they no longer overlay/shift with scaling.
+    function hoistSidePanelsOutOfBuilding() {
+        const wrapper = document.querySelector('.plan-wrapper');
+        const building = wrapper?.querySelector('.building-plan, .building');
+        const leftPanel = document.querySelector('.legend-block.left-info-panel');
+        const rightPanel = document.querySelector('.legend-block.main-legend');
+        if (!wrapper || !building) return;
+
+        if (leftPanel && building.contains(leftPanel)) {
+            wrapper.insertBefore(leftPanel, building);
+        }
+        if (rightPanel && building.contains(rightPanel)) {
+            wrapper.insertBefore(rightPanel, building);
+        }
+    }
+
+    // Hard-force side panels away from the plan area on desktop.
+    function enforceSidePanelsLayout() {
+        const wrapper = document.querySelector('.plan-wrapper');
+        const leftPanel = document.querySelector('.legend-block.left-info-panel');
+        const rightPanel = document.querySelector('.legend-block.main-legend');
+        if (!wrapper) return;
+
+        const isPrintMode =
+            document.body.classList.contains('print-report') ||
+            document.body.classList.contains('print-plan') ||
+            window.matchMedia('print').matches;
+        if (isPrintMode) {
+            wrapper.style.removeProperty('padding-left');
+            wrapper.style.removeProperty('padding-right');
+            [leftPanel, rightPanel].forEach((panel) => {
+                if (!panel) return;
+                panel.style.removeProperty('position');
+                panel.style.removeProperty('top');
+                panel.style.removeProperty('left');
+                panel.style.removeProperty('right');
+                panel.style.removeProperty('width');
+                panel.style.removeProperty('max-height');
+                panel.style.removeProperty('overflow-y');
+                panel.style.removeProperty('z-index');
+                panel.style.removeProperty('margin');
+            });
+            return;
+        }
+
+        const isDesktop = window.matchMedia('(min-width: 1025px)').matches;
+        const nav = document.querySelector('.page-navbar');
+        const topOffset = (nav?.offsetHeight || 80) + 44;
+
+        if (isDesktop) {
+            wrapper.style.setProperty('padding-left', '318px', 'important');
+            wrapper.style.setProperty('padding-right', '286px', 'important');
+
+            [leftPanel, rightPanel].forEach((panel) => {
+                if (!panel) return;
+                panel.style.setProperty('position', 'fixed', 'important');
+                panel.style.setProperty('top', `${topOffset}px`, 'important');
+                panel.style.setProperty('width', '276px', 'important');
+                panel.style.setProperty('max-height', `calc(100vh - ${topOffset + 24}px)`, 'important');
+                panel.style.setProperty('overflow-y', 'auto', 'important');
+                panel.style.setProperty('z-index', '4000', 'important');
+            });
+
+            if (leftPanel) {
+                leftPanel.style.setProperty('left', '16px', 'important');
+                leftPanel.style.setProperty('right', 'auto', 'important');
+            }
+            if (rightPanel) {
+                rightPanel.style.setProperty('right', '16px', 'important');
+                rightPanel.style.setProperty('left', 'auto', 'important');
+            }
+        } else {
+            wrapper.style.setProperty('padding-left', '12px', 'important');
+            wrapper.style.setProperty('padding-right', '12px', 'important');
+
+            [leftPanel, rightPanel].forEach((panel) => {
+                if (!panel) return;
+                panel.style.setProperty('position', 'static', 'important');
+                panel.style.setProperty('top', 'auto', 'important');
+                panel.style.setProperty('left', 'auto', 'important');
+                panel.style.setProperty('right', 'auto', 'important');
+                panel.style.setProperty('width', 'min(100%, 560px)', 'important');
+                panel.style.setProperty('max-height', 'none', 'important');
+                panel.style.setProperty('overflow-y', 'visible', 'important');
+                panel.style.setProperty('margin', '0 auto 12px', 'important');
+            });
+        }
+    }
 
     // Fit the whole plan section to current viewport width.
     function scaleBuildingToFit() {
-        const building = document.querySelector('.building');
+        const building = document.querySelector('.building-plan, .building');
         const wrapper = document.querySelector('.plan-wrapper');
         if (!building || !wrapper) return;
 
@@ -1716,8 +2002,20 @@ if (btnSave) {
         wrapper.style.minHeight = `${Math.ceil(planHeight * scale) + 24}px`;
     }
 
+    hoistSidePanelsOutOfBuilding();
+    enforceSidePanelsLayout();
     scaleBuildingToFit();
-    window.addEventListener('resize', () => window.requestAnimationFrame(scaleBuildingToFit));
+    window.addEventListener('resize', () => {
+        window.requestAnimationFrame(hoistSidePanelsOutOfBuilding);
+        window.requestAnimationFrame(enforceSidePanelsLayout);
+        window.requestAnimationFrame(scaleBuildingToFit);
+    });
+    window.addEventListener('beforeprint', enforceSidePanelsLayout);
+    window.addEventListener('afterprint', () => {
+        window.requestAnimationFrame(hoistSidePanelsOutOfBuilding);
+        window.requestAnimationFrame(enforceSidePanelsLayout);
+        window.requestAnimationFrame(scaleBuildingToFit);
+    });
 });
 
 function renderDateStrip() {
@@ -1873,7 +2171,7 @@ function initDashboardSummary() {
 
     function scaleDashboardPlan() {
         const planWrap = document.querySelector('.dashboard-plan');
-        const plan = planWrap?.querySelector('.building');
+        const plan = planWrap?.querySelector('.building-plan, .building, .building-b-wrapper');
         if (!planWrap || !plan) return;
 
         const wrapWidth = planWrap.clientWidth;
@@ -1905,7 +2203,7 @@ function initDashboardSummary() {
     }
 
     function scalePlanForPrintPortrait() {
-        const plan = document.querySelector('.building');
+        const plan = document.querySelector('.building-plan, .building, .building-b-wrapper');
         if (!plan) return;
         const { pageW, pageH, printableW, printableH } = getPrintPageSizePx();
         const rect = plan.getBoundingClientRect();
@@ -1920,7 +2218,7 @@ function initDashboardSummary() {
         const scale = Math.min(1, scaleX, scaleY) * 0.88;
         const scaledW = planHeight * scale;
         const scaledH = planWidth * scale;
-        const extraShiftX = 240;
+        const extraShiftX = 0;
         const translateX = (printableW - scaledW) / 2 + extraShiftX;
         const translateY = (printableH - scaledH) / 2 + scaledH;
         document.body.style.setProperty('--print-page-w', `${pageW.toFixed(2)}px`);
@@ -2016,3 +2314,40 @@ window.disableQuickMode = function() {
     const statusBar = document.getElementById('quick-status-bar');
     if (statusBar) statusBar.classList.add('hidden');
 };
+// ฟังก์ชันสำหรับสวิตช์เปิด-ปิด Highlight Mode
+window.toggleHighlightMode = function(isActive) {
+    if (isActive) {
+        document.body.classList.add('highlight-mode-active');
+        applyHighlightEffect(); // อัปเดตสถานะห้องทันที
+    } else {
+        document.body.classList.remove('highlight-mode-active');
+        // ล้าง Effect ทั้งหมดเพื่อให้ทุกห้องกลับมาปกติ
+        document.querySelectorAll('.room').forEach(room => {
+            room.classList.remove('is-dimmed-force', 'is-highlight-force');
+        });
+    }
+};
+
+// ฟังก์ชันคำนวณว่าห้องไหนควรจาง (Dim) หรือควรชัด (Highlight)
+function applyHighlightEffect() {
+    // ทำงานเฉพาะตอนเปิดโหมด Highlight เท่านั้น
+    if (!document.body.classList.contains('highlight-mode-active')) return;
+
+    const rooms = document.querySelectorAll('.room');
+    rooms.forEach(room => {
+        const roomMaint = (room.getAttribute('data-maint') || '').trim();
+        
+        if (activeFilters.size === 0) {
+            // ถ้าไม่ได้เลือกฟิลเตอร์อะไรเลย ให้แสดงผลปกติทุกห้อง
+            room.classList.remove('is-dimmed-force', 'is-highlight-force');
+        } else if (activeFilters.has(roomMaint)) {
+            // ถ้าห้องตรงกับสถานะที่เลือก ให้ทำตัวหนา/ชัด
+            room.classList.remove('is-dimmed-force');
+            room.classList.add('is-highlight-force');
+        } else {
+            // ถ้าห้องไม่ตรง ให้จางลง
+            room.classList.remove('is-highlight-force');
+            room.classList.add('is-dimmed-force');
+        }
+    });
+}
