@@ -27,6 +27,19 @@ function get_pdo(): PDO
 
 function ensure_tables(PDO $pdo): void
 {
+    // Prevent silent truncation/failures when saving item snapshots with base64 images.
+    // Some local MySQL setups default to 1MB max_allowed_packet, which is too small.
+    try {
+        $row = $pdo->query("SHOW GLOBAL VARIABLES LIKE 'max_allowed_packet'")->fetch();
+        $currentPacket = isset($row['Value']) ? (int)$row['Value'] : 0;
+        $targetPacket = 64 * 1024 * 1024; // 64MB
+        if ($currentPacket > 0 && $currentPacket < $targetPacket) {
+            $pdo->exec("SET GLOBAL max_allowed_packet = {$targetPacket}");
+        }
+    } catch (Throwable $e) {
+        // ignore if privilege is not sufficient; app still runs with current setting
+    }
+
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS room_types (
             id VARCHAR(64) PRIMARY KEY,
@@ -67,6 +80,7 @@ function ensure_tables(PDO $pdo): void
             ap_installed TINYINT(1) DEFAULT 0,
             ap_date DATE NULL,
             bed_badge VARCHAR(16) DEFAULT '',
+            room_image MEDIUMBLOB NULL,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
@@ -84,6 +98,7 @@ function ensure_tables(PDO $pdo): void
             ap_installed TINYINT(1) DEFAULT 0,
             ap_date DATE NULL,
             bed_badge VARCHAR(16) DEFAULT '',
+            room_image MEDIUMBLOB NULL,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (building, room_id, snapshot_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -97,6 +112,24 @@ function ensure_tables(PDO $pdo): void
             items_json LONGTEXT NOT NULL,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (building, room_id, snapshot_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS maintenance_tasks (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            building VARCHAR(8) NOT NULL,
+            room_id VARCHAR(32) NOT NULL,
+            type VARCHAR(255) NOT NULL,
+            note TEXT,
+            reported_date DATE NOT NULL,
+            resolved_date DATE NULL,
+            status VARCHAR(16) NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_maint_building_status (building, status),
+            KEY idx_maint_building_room (building, room_id),
+            KEY idx_maint_reported (reported_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
 
@@ -118,11 +151,22 @@ function ensure_tables(PDO $pdo): void
     } catch (Throwable $e) {
         // ignore when already exists
     }
+    try {
+        $pdo->exec("ALTER TABLE rooms_status ADD COLUMN room_image MEDIUMBLOB NULL AFTER bed_badge;");
+    } catch (Throwable $e) {
+        // ignore when already exists
+    }
+    try {
+        $pdo->exec("ALTER TABLE room_status_history ADD COLUMN room_image MEDIUMBLOB NULL AFTER bed_badge;");
+    } catch (Throwable $e) {
+        // ignore when already exists
+    }
 
     // Prune history older than 30 days
     try {
         $pdo->exec("DELETE FROM room_status_history WHERE snapshot_date < DATE_SUB(CURDATE(), INTERVAL 30 DAY);");
         $pdo->exec("DELETE FROM room_items_history WHERE snapshot_date < DATE_SUB(CURDATE(), INTERVAL 30 DAY);");
+        $pdo->exec("DELETE FROM maintenance_tasks WHERE reported_date < DATE_SUB(CURDATE(), INTERVAL 90 DAY);");
     } catch (Throwable $e) {
         // ignore pruning errors
     }

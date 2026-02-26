@@ -1,11 +1,11 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <title>Building A</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <link rel="stylesheet" href="css/style.css?v=20260225h">
+  <link rel="stylesheet" href="css/style.css?v=20260226z">
   <script src="https://cdn.tailwindcss.com"></script>
   <style type="text/tailwindcss">
     @keyframes slideIn {
@@ -18,6 +18,20 @@
   </style>
 
   <style>
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    body {
+        padding-top: 0 !important;
+    }
+
+    .page-navbar {
+        margin-top: 0 !important;
+        top: 0 !important;
+    }
+
     /* ========== LAYOUT FIXES ========== */
     .plan-wrapper {
         display: flex;
@@ -146,7 +160,7 @@
         font-size: 16px; opacity: 0; transform: scale(0); transition: all 0.2s; z-index: 10;
     }
 
-    /* CSS สำหรับ AP Date Input */
+    /* CSS เน€เธเธเน€เธเธ“เน€เธเธเน€เธเธเน€เธเธ‘เน€เธย AP Date Input */
     .checkbox-custom { width: 18px; height: 18px; cursor: pointer; accent-color: #2563eb; }
     .hidden { display: none; }
 
@@ -170,9 +184,17 @@
 
 .room.is-highlight-force {
     opacity: 1 !important;
-    filter: none !important; /* ปิดการทำ grayscale */
-    transform: scale(1.1) !important;
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.8) !important;
+    filter: none !important; /* เน€เธยเน€เธเธ”เน€เธโ€เน€เธยเน€เธเธ’เน€เธเธเน€เธโ€”เน€เธเธ“ grayscale */
+    transform: none !important;
+    box-shadow: none !important;
+}
+.room.is-type-dimmed-force {
+    opacity: 0.18 !important;
+    filter: grayscale(100%) !important;
+}
+.room.is-type-highlight-force {
+    opacity: 1 !important;
+    filter: none !important;
 }
 .item-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .item-card:hover { transform: translateY(-4px); }
@@ -191,17 +213,21 @@
     .image-dropzone .drop-hint { color: #64748b; font-size: 12px; }
     .category-badge { animation: popIn 0.3s ease-out; }
     @keyframes popIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    .item-preview-trigger { cursor: zoom-in; }
+    #imageViewerModal img {
+        max-height: calc(100vh - 130px);
+    }
 
     /* date-strip styles removed */
         /* Ensure hidden modals do not block pointer events */
-        .modal-overlay.hidden, #roomInfoModal.hidden, #addItemModal.hidden, #admin-modal-canva.hidden {
+        .modal-overlay.hidden, #roomInfoModal.hidden, #addItemModal.hidden, #admin-modal-canva.hidden, #imageViewerModal.hidden {
                 display: none !important;
                 pointer-events: none !important;
         }
         /* change-badge removed */
   </style>
 </head>
-<body data-building-image="img/Andaman.jpg" data-building-title="Building A – Ocean View">
+<body style="margin:0;padding:0;" data-building-id="A" data-building-image="img/Andaman.jpg" data-building-title="Building A เนโฌโ€ Ocean View">
 
 <header class="page-navbar sticky top-0 z-[3000] bg-white/85 backdrop-blur-md border-b border-slate-200 shadow-sm !p-0">
   <div class="flex flex-wrap items-center justify-between px-5 py-3 w-full gap-y-3">
@@ -222,7 +248,7 @@
         </div>
         <div>
           <h1 class="text-sm font-extrabold text-slate-800 leading-none tracking-wide m-0">BUILDING A</h1>
-          <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase m-0">Ocean View</span>
+          <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase m-0">ABSC</span>
         </div>
       </div>
     </div>
@@ -242,7 +268,7 @@
       </button> 
 
       <button onclick="enableQuickMode()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none cursor-pointer text-orange-600 bg-orange-50 hover:bg-orange-100">
-          ⚡ QUICK UPDATE
+          ⚡QUICK UPDATE
       </button> 
 
       <button id="dashboardBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
@@ -321,33 +347,33 @@
 
     <div class="floor small">
         <div class="room type-condo half flex items-center justify-center relative" data-room-id="2101-F1">
-            2101 Floor 1<br><span class="guest-label">Mrs.Mizuki</span>
+            2101 Floor 1
         </div>
         <div class="room type-condo half flex items-center justify-center relative" data-room-id="2102-F1">
-            2102 Floor 1<br><span class="guest-label">Dr.Gerhard</span>
+            2102 Floor 1
         </div>
     </div>
 
     <div class="floor large">
         <div class="room type-condo w-full h-full flex items-center justify-center relative" data-room-id="2001-2008">
-            2001–2008 <br> <span class="guest-label">Mr.Moravekar</span>
+            2001–2008 
         </div>
     </div>
-                <div class="floor floor19"><div class="r1 room type-condo">1901 <br> Mr.Moravekar</div><div class="r2 room type-sus">1902 <br> Mr.Moravekar</div><div class="r3 room type-dls">1903 <br> Mr.Moravekar</div><div class="r4 room type-condo">1905 <br> Mr.Moravekar</div></div>
+                <div class="floor floor19"><div class="r1 room type-condo">1901 </div><div class="r2 room type-dls" style="width:200px;">1903 </div><div class="r4 room type-condo">1905 </div></div>
                 <div class="floor level18"><div class="r1 room type-condo">1801</div><div class="r2 room type-dls">1805</div><div class="r3 room type-sus">1806</div><div class="r4 room type-dls">1807</div><div class="r5 room type-dls">1808</div><div class="r6 room type-sus">1809</div><div class="r7 room type-dls">1810</div><div class="r8 room type-condo">1804</div></div>
                 <div class="floor level17"><div class="r1 room type-condo">1701-02</div><div class="r2 room type-sus">1703</div><div class="r3 room type-dls">1704</div><div class="r4 room type-dls">1705</div><div class="r5 room type-dls">1706</div><div class="r6 room type-dls">1707</div><div class="r7 room type-sus">1708</div><div class="r8 room type-condo">1709</div></div>
-                <div class="floor level16"><div class="r1 room type-lux">1601–1602<br>LUX</div><div class="r2 room type-condo">1603<br>SUS</div><div class="r3 room type-sus">1604<br>SUS</div><div class="r4 room type-dls">1605<br>DLS</div><div class="r5 room type-dls">1607<br>DLS</div><div class="r6 room type-dls">1608<br>DLS</div><div class="r7 room type-dls">1609<br>DLS</div><div class="r8 room type-sus">1610<br>SUS</div><div class="r9 room type-condo">1606<br>SUS</div><div class="r10 room type-lux">1611–1612<br>ROY</div></div>
-                <div class="floor level15"><div class="r1 room type-condo room-type">1501–1502<br>BYD</div><div class="r2 room type-condo room-type">1503<br>BYD</div><div class="r3 room type-sus room-type">1504<br>SUS</div><div class="r4 room type-dls room-type">1505<br>DLS</div><div class="r5 room type-dls room-type">1506<br>DLS</div><div class="r6 room type-dls room-type">1507<br>DLS</div><div class="r7 room type-dls room-type">1508<br>DLS</div><div class="r8 room type-sus room-type">1509<br>SUS</div><div class="r9 room type-condo room-type">1510<br>SUS</div><div class="r10 room type-condo room-type">1511–1512<br>SUS</div></div>
-                <div class="floor level14"><div class="r1 room type-condo room-type">1401–1402</div><div class="r2 room type-condo room-type">1403</div><div class="r3 room type-sdl room-type">1404<br>SDL</div><div class="r4 room type-sdl room-type">1405<br>SDL</div><div class="r5 room type-sdl room-type">1406<br>SDL</div><div class="r6 room type-sdl room-type">1410<br>SDL</div><div class="r7 room type-condo room-type">1407</div><div class="r10 room type-condo room-type">1408–1409</div></div>
-                <div class="floor level12"><div class="r1 room type-condo">1201-02 <br>Mrs.Maillard</div><div class="r2 room type-condo">1203 <br>K.Sunan</div><div class="r3 room type-condo">1204 <br>Mr.&Mrs.Gazonnaud </div><div class="r4 room type-dls">1205 <br>DLS New</div><div class="r5 room type-dls">1210 <br>DLS New</div><div class="r6 room type-condo">1206 <br>Mr.Keller</div><div class="r7 room type-condo">1207 <br>Mr.Sonerud</div><div class="r10 room type-condo">1208-09<br>Mrs.Marti</div></div>
-                <div class="floor level11"><div class="r1 room type-condo">1101-02 <br>K.Bernd</div><div class="r2 room type-sdl" data-room-id="1103-1104" style="width:200px;">1103 - 1104 <br>SDL</div><div class="r4 room type-sus">1105 <br>SUS</div><div class="r5 room type-dls">1106 <br>DLS</div><div class="r6 room type-dls">1108 <br>DLS</div><div class="r7 room type-dls">1109 <br>DLS</div><div class="r8 room type-condo">1110-11 <br>K.Tom, K.สุดใจ </div><div class="r9 room type-condo">1107 <br>K.Tom, K.สุดใจ </div><div class="r10 room type-condo">1112-14 <br>K.Tom, K.สุดใจ </div></div>
-                <div class="floor level10"><div class="r1 room type-condo">1001-02 <br>K.Odd</div><div class="r2 room type-condo">1003 <br>K.Regis</div><div class="r3 room type-sus">1004 <br> SUS </div><div class="r4 room type-dls">1005 <br>DLS</div><div class="r5 room type-dls">1006 <br>DLS</div><div class="r6 room type-dls">1010 <br>DLS</div><div class="r7 room type-condo">1011-12 <br>K.Alex</div><div class="r8 room type-condo">1007 <br>K.Alex </div><div class="r9 room type-condo">1008-09 <br>K.Alex </div></div>
-                <div class="floor level9"><div class="r1 room type-condo">901-02 <br>K.Bernd</div><div class="r2 room type-condo">903 <br>K.Sunan</div><div class="r3 room type-sus">904 <br> SUS </div><div class="r4 room type-dls">905 <br>DLS</div><div class="r5 room type-dls">906 <br>DLS</div><div class="r6 room type-dls">907 <br>DLS</div><div class="r7 room type-dls" data-room-id="908-909" style="width:200px;">908 - 909</div><div class="r9 room type-dls">910 <br>DLS </div><div class="r10 room type-sdl">911 <br>SDL </div><div class="r11 room type-condo">912 <br>K.Marcus </div></div>
-                <div class="floor level8"><div class="r1 room type-fam">801  802 <br>FAM</div><div class="r2 room type-condo">803<br>Mr.&Mrs.Stammer</div><div class="r3 room type-sps">804<br>SPS</div><div class="r4 room type-sps">805<br>SPS</div><div class="r5 room type-sps">806 <br>SPS</div><div class="r6 room type-sps">807 <br>SPS</div><div class="r7 room type-sps">808 <br>DLS</div><div class="r8 room type-sps">809 <br>SPS</div><div class="r9 room type-sps">810<br>SPS</div><div class="r10 room type-sdl">811 <br>SDL </div><div class="r11 room type-condo">812-14 <br>K.Eddy </div></div>
-                <div class="floor level7"><div class="r1 room type-fam">701 702<br>FAM</div><div class="r2 room type-condo">703 <br>K.Marc</div><div class="r3 room type-condo">704 <br>Mr.Lim</div><div class="r4 room type-sps">705 <br> SPS</div><div class="r5 room type-condo">706 <br>K.Peter</div><div class="r6 room type-sps">707 <br>SPS</div><div class="r7 room type-condo">708 <br>Mr.Terbuyken</div><div class="r8 room type-sps">709 <br>SPS </div><div class="r9 room type-sps">710 <br>SPS</div><div class="r10 room type-condo">711 <br>K.Bernard</div><div class="r11 room type-condo">712 <br>Mr.Kemenade</div><div class="r12 room type-fam">714 715 <br>FAM</div></div>
-                <div class="floor level6"><div class="r1 room type-fam">601 602 <br>FAM</div><div class="r2 room type-condo">603<br>Mr.Taret</div><div class="r3 room type-sps">604<br>SPS</div><div class="r4 room type-sps">605<br>SPS</div><div class="r5 room type-sps">606<br>SPS</div><div class="r6 room type-sps">607<br>SPS</div><div class="r7 room type-condo">608 <br>BYD (K.Hans)</div><div class="r8 room type-sps">609 <br>SPS</div><div class="r9 room type-sps">610<br>SPS</div><div class="r10 room type-sps">611<br>SPS</div><div class="r11 room type-sdl">612<br>SDL</div><div class="r12 room type-fam">614 615<br>FAM</div></div>
-                <div class="floor level5"><div class="r1 room type-fam">501 502<br>FAM</div><div class="r2 room type-sdl">503<br>SDL</div><div class="r3 room type-sps">504<br>SPS</div><div class="r4 room type-sps">505<br>SPS</div><div class="r5 room type-sps">506<br>SPS</div><div class="r6 room type-sps">507<br>SPS</div><div class="r7 room type-sps">508<br>SPS</div><div class="r8 room type-sps">509<br>SPS</div><div class="r9 room type-sps">510<br>SPS</div><div class="r10 room type-sps">511<br>SPS</div><div class="r11 room type-condo">512<br>Mr.John Ove</div><div class="r12 room type-fam">514 515<br>FAM</div></div>
-                <div class="floor level4"><div class="r1 room type-condo">401-02<br>BAM</div><div class="r2 room type-sps">403<br>SPS</div><div class="r3 room type-sps">404<br>SPS</div><div class="r4 room type-sps">405<br>SPS</div><div class="r5 room type-sps">406<br>SPS</div><div class="r6 room type-sps">407<br>SPS</div><div class="r7 room type-sps">408<br>SPS</div><div class="r8 room type-sps">409<br>SPS</div><div class="r9 room type-sps">410<br>SPS</div><div class="r10 room type-sps">411<br>SPS</div><div class="r11 room type-sps">412<br>Mr.John Ove</div><div class="r12 room type-fam">414 415<br>FAM</div></div>
+                <div class="floor level16"><div class="r1 room type-lux">1601–1602</div><div class="r2 room type-condo">1603</div><div class="r3 room type-sus">1604</div><div class="r4 room type-dls">1605</div><div class="r5 room type-dls">1607</div><div class="r6 room type-dls">1608</div><div class="r7 room type-dls">1609</div><div class="r8 room type-sus">1610</div><div class="r9 room type-condo">1606</div><div class="r10 room type-lux">1611–1612</div></div>
+                <div class="floor level15"><div class="r1 room type-condo room-type">1501-02</div><div class="r2 room type-condo room-type">1503</div><div class="r3 room type-sus room-type">1504</div><div class="r4 room type-dls room-type">1505</div><div class="r5 room type-dls room-type">1506</div><div class="r6 room type-dls room-type">1507</div><div class="r7 room type-dls room-type">1508</div><div class="r8 room type-sus room-type">1509</div><div class="r9 room type-condo room-type">1510</div><div class="r10 room type-condo room-type">1511-12</div></div>
+                <div class="floor level14"><div class="r1 room type-condo room-type">1401-02</div><div class="r2 room type-condo room-type">1403</div><div class="r3 room type-sdl room-type">1404</div><div class="r4 room type-sdl room-type">1405</div><div class="r5 room type-sdl room-type">1406</div><div class="r6 room type-sdl room-type">1410</div><div class="r7 room type-condo room-type">1407</div><div class="r10 room type-condo room-type">1408-09</div></div>
+                <div class="floor level12"><div class="r1 room type-condo">1201-02 </div><div class="r2 room type-condo">1203 </div><div class="r3 room type-condo">1204 </div><div class="r4 room type-dls">1205 </div><div class="r5 room type-dls">1210 </div><div class="r6 room type-condo">1206 </div><div class="r7 room type-condo">1207 </div><div class="r10 room type-condo">1208-09</div></div>
+                <div class="floor level11"><div class="r1 room type-condo">1101-02 </div><div class="r2 room type-sdl" data-room-id="1103-1104" style="width:200px;">1103 - 1104 </div><div class="r4 room type-sus">1105 </div><div class="r5 room type-dls">1106 </div><div class="r6 room type-dls">1108 </div><div class="r7 room type-dls">1109 </div><div class="r8 room type-condo">1110-11 </div><div class="r9 room type-condo">1107 </div><div class="r10 room type-condo">1112-14 </div></div>
+                <div class="floor level10"><div class="r1 room type-condo">1001-02 </div><div class="r2 room type-condo">1003 </div><div class="r3 room type-sus">1004 </div><div class="r4 room type-dls">1005 </div><div class="r5 room type-dls">1006 </div><div class="r6 room type-dls">1010 </div><div class="r7 room type-condo">1011-12 </div><div class="r8 room type-condo">1007 </div><div class="r9 room type-condo">1008-09 </div></div>
+                <div class="floor level9"><div class="r1 room type-condo">901-02 </div><div class="r2 room type-condo">903 </div><div class="r3 room type-sus">904 </div><div class="r4 room type-dls">905 </div><div class="r5 room type-dls">906 </div><div class="r6 room type-dls">907 </div><div class="r7 room type-dls" data-room-id="908-909" style="width:200px;">908 - 909</div><div class="r9 room type-dls">910 </div><div class="r10 room type-sdl">911 </div><div class="r11 room type-condo">912 </div></div>
+                <div class="floor level8"><div class="r1 room type-fam">801  802 </div><div class="r2 room type-condo">803</div><div class="r3 room type-sps">804</div><div class="r4 room type-sps">805</div><div class="r5 room type-sps">806 </div><div class="r6 room type-sps">807 </div><div class="r7 room type-sps">808 </div><div class="r8 room type-sps">809 </div><div class="r9 room type-sps">810</div><div class="r10 room type-sdl">811 </div><div class="r11 room type-condo">812-14 </div></div>
+                <div class="floor level7"><div class="r1 room type-fam">701 702</div><div class="r2 room type-condo">703 </div><div class="r3 room type-condo">704 </div><div class="r4 room type-sps">705 </div><div class="r5 room type-condo">706 </div><div class="r6 room type-sps">707 </div><div class="r7 room type-condo">708 </div><div class="r8 room type-sps">709 </div><div class="r9 room type-sps">710 </div><div class="r10 room type-condo">711 </div><div class="r11 room type-condo">712 </div><div class="r12 room type-fam">714 715 </div></div>
+                <div class="floor level6"><div class="r1 room type-fam">601 602 </div><div class="r2 room type-condo">603</div><div class="r3 room type-sps">604</div><div class="r4 room type-sps">605</div><div class="r5 room type-sps">606</div><div class="r6 room type-sps">607</div><div class="r7 room type-condo">608 </div><div class="r8 room type-sps">609 </div><div class="r9 room type-sps">610</div><div class="r10 room type-sps">611</div><div class="r11 room type-sdl">612</div><div class="r12 room type-fam">614 615</div></div>
+                <div class="floor level5"><div class="r1 room type-fam">501 502</div><div class="r2 room type-sdl">503</div><div class="r3 room type-sps">504</div><div class="r4 room type-sps">505</div><div class="r5 room type-sps">506</div><div class="r6 room type-sps">507</div><div class="r7 room type-sps">508</div><div class="r8 room type-sps">509</div><div class="r9 room type-sps">510</div><div class="r10 room type-sps">511</div><div class="r11 room type-condo">512</div><div class="r12 room type-fam">514 515</div></div>
+                <div class="floor level4"><div class="r1 room type-condo">401-02</div><div class="r2 room type-sps">403</div><div class="r3 room type-sps">404</div><div class="r4 room type-sps">405</div><div class="r5 room type-sps">406</div><div class="r6 room type-sps">407</div><div class="r7 room type-sps">408</div><div class="r8 room type-sps">409</div><div class="r9 room type-sps">410</div><div class="r10 room type-sps">411</div><div class="r11 room type-sps">412</div><div class="r12 room type-fam">414 415</div></div>
 
             </div> </div> </div> </div> 
 
@@ -363,11 +389,11 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-5">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">👤 Guest Name</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">👤Guest Name</label>
                         <input type="text" id="editGuestName" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 input-focus text-gray-700">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">🛏️ Room Type</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">🛏️Room Type</label>
                         <input type="hidden" id="editRoomType" value="">
                         <div id="roomTypeSelect" class="room-type-select">
                             <button type="button" id="roomTypeSelectBtn" class="room-type-select__btn">
@@ -456,25 +482,6 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-6 bg-white relative">
-            <div id="room-info-note-panel" class="hidden absolute bottom-16 right-4 w-[320px] max-w-[calc(100%-2rem)] rounded-xl border border-slate-200 bg-white p-4 shadow-xl z-30">
-                <div id="room-info-note-view">
-                    <div class="text-sm font-semibold text-slate-700 mb-2">Room Note</div>
-                    <div id="room-info-note-text" class="min-h-[72px] text-sm text-slate-600 whitespace-pre-wrap break-words bg-slate-50 border border-slate-200 rounded-lg p-3">ยังไม่มีโน้ตห้อง</div>
-                    <div class="mt-3 flex justify-end gap-2">
-                        <button id="room-info-note-edit-btn" onclick="enterRoomInfoNoteEdit()" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition cursor-pointer border-none">Edit</button>
-                        <button onclick="toggleRoomInfoNotePanel(false)" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-300 transition cursor-pointer border-none">Close</button>
-                    </div>
-                </div>
-                <div id="room-info-note-editor" class="hidden">
-                    <label for="room-info-note-input" class="block text-sm font-semibold text-slate-700 mb-2">Edit Note</label>
-                    <textarea id="room-info-note-input" rows="4" placeholder="จดได้ทุกอย่าง เช่น ความกว้างห้อง, ตำแหน่งเตียง, จุดสังเกตพิเศษ ฯลฯ" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition bg-white"></textarea>
-                    <div class="mt-3 flex justify-end gap-2">
-                        <button id="room-info-note-save-btn" onclick="saveRoomInfoNote()" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition cursor-pointer border-none">Save</button>
-                        <button onclick="cancelRoomInfoNoteEdit()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-300 transition cursor-pointer border-none">Cancel</button>
-                    </div>
-                </div>
-            </div>
-
             <div class="flex gap-2 overflow-x-auto pb-4" id="category-filters"></div>
 
             <div id="items-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-10"></div>
@@ -489,10 +496,37 @@
                 </button>
             </div>
 
-            <button id="room-info-note-toggle-btn" onclick="toggleRoomInfoNotePanel()" class="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition cursor-pointer border-none text-base font-bold shadow-md z-20" title="Room Note">
-                📌
-            </button>
         </div>
+        <div id="room-info-note-panel" class="hidden absolute bottom-16 right-4 w-[320px] max-w-[calc(100%-2rem)] rounded-xl border border-slate-200 bg-white p-4 shadow-xl z-30">
+            <div id="room-info-note-view">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Room Note</div>
+                <div id="room-info-note-text" class="min-h-[72px] text-sm text-slate-600 whitespace-pre-wrap break-words bg-slate-50 border border-slate-200 rounded-lg p-3">There are no room notes yet.</div>
+                <div class="mt-3 flex justify-end gap-2">
+                    <button id="room-info-note-edit-btn" onclick="enterRoomInfoNoteEdit()" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition cursor-pointer border-none">Edit</button>
+                    <button onclick="toggleRoomInfoNotePanel(false)" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-300 transition cursor-pointer border-none">Close</button>
+                </div>
+            </div>
+            <div id="room-info-note-editor" class="hidden">
+                <label for="room-info-note-input" class="block text-sm font-semibold text-slate-700 mb-2">Edit Note</label>
+                <textarea id="room-info-note-input" rows="4" placeholder="Enter room note here..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition bg-white"></textarea>
+                <div class="mt-3 flex justify-end gap-2">
+                    <button id="room-info-note-save-btn" onclick="saveRoomInfoNote()" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition cursor-pointer border-none">Save</button>
+                    <button onclick="cancelRoomInfoNoteEdit()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-300 transition cursor-pointer border-none">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <button id="room-info-note-toggle-btn" onclick="toggleRoomInfoNotePanel()" class="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition cursor-pointer border-none text-base font-bold shadow-md z-30" title="Room Note">
+            📌
+        </button>
+    </div>
+</div>
+
+<div id="imageViewerModal" class="hidden fixed inset-0 flex items-center justify-center p-4" style="z-index: 22000 !important;">
+    <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" data-image-viewer-close></div>
+    <div class="relative z-10 w-full max-w-6xl">
+        <button type="button" class="absolute -top-12 right-0 h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white text-xl font-bold border-none cursor-pointer flex items-center justify-center" data-image-viewer-close aria-label="Close image viewer">เธฃโ€”</button>
+        <img id="imageViewerImg" src="" alt="Preview" class="w-full rounded-2xl shadow-2xl object-contain bg-black/20">
+        <p id="imageViewerCaption" class="mt-3 text-center text-white/90 text-sm"></p>
     </div>
 </div>
 
@@ -561,7 +595,7 @@
 
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Note</label>
-                    <textarea id="item-note-input" rows="3" placeholder="เช่น ห้องกว้าง 4 เมตร, หัวเตียงชิดผนังด้านซ้าย, ใช้เก็บรายละเอียดอื่นๆ ได้ทั้งหมด" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"></textarea>
+                    <textarea id="item-note-input" rows="3" placeholder="Enter any additional notes about this item" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"></textarea>
                 </div>
 
                 <div>
@@ -627,10 +661,6 @@ function toggleAPDate() {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
           Admin Password
         </button>
-        <button data-target="tab-general" class="settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-transparent text-slate-500 hover:bg-white/60 hover:text-slate-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
-          General
-        </button>
       </div>
 
       <div class="flex-1 overflow-y-auto p-6 bg-white relative">
@@ -656,7 +686,7 @@ function toggleAPDate() {
 
         <div id="tab-maintenance" class="settings-tab-content hidden">
             <h3 class="text-base font-extrabold text-slate-800 mb-1">🛠️ Maintenance Categories</h3>
-            <p class="text-sm text-slate-500 mb-5">จัดการหมวดหมู่งานซ่อมบำรุง — ไอคอนจะแสดงใน Service Status</p>
+            <p class="text-sm text-slate-500 mb-5">จัดการประเภทงานซ่อมแซม สามารถเลือกไอคอนและชื่อได้ตามต้องการ</p>
             <div id="maintenance-list" class="space-y-2 mb-5 h-[35vh] overflow-y-auto pr-2"></div>
             <form id="maintenance-form" class="p-4 bg-purple-50/50 rounded-xl border border-purple-100 space-y-4">
               <div>
@@ -666,7 +696,7 @@ function toggleAPDate() {
               <div>
                 <label class="block text-xs font-bold text-slate-600 mb-2">Select Icon</label>
                 <div class="flex flex-wrap gap-2" id="icon-selector">
-                  <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-purple-500 bg-purple-100 shadow-md scale-110 cursor-pointer text-xl transition-all" data-icon="📶">📶</button>
+                   <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-purple-500 bg-purple-100 shadow-md scale-110 cursor-pointer text-xl transition-all" data-icon="📶">📶</button>
                   <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon="❄️">❄️</button>
                   <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon="🧹">🧹</button>
                   <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon="🔧">🔧</button>
@@ -685,49 +715,23 @@ function toggleAPDate() {
 
         <div id="tab-admin" class="settings-tab-content hidden">
             <h3 class="text-base font-extrabold text-slate-800 mb-1">Admin Password</h3>
-            <p class="text-sm text-slate-500 mb-5">เปลี่ยนรหัสผ่านสำหรับ Staff Login</p>
+            <p class="text-sm text-slate-500 mb-5">Change password for Staff Login</p>
             <div class="max-w-sm space-y-4">
                 <div>
-                  <label class="block text-sm font-bold text-slate-700 mb-1.5">🔑 รหัสปัจจุบัน</label>
-                  <input type="password" placeholder="••••" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+                  <label class="block text-sm font-bold text-slate-700 mb-1.5">Current Code</label>
+                  <input type="password" placeholder="Enter current password" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
                 </div>
                 <div>
-                  <label class="block text-sm font-bold text-slate-700 mb-1.5">🔐 รหัสใหม่</label>
-                  <input type="password" placeholder="อย่างน้อย 4 ตัว" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+                  <label class="block text-sm font-bold text-slate-700 mb-1.5">New Password</label>
+                  <input type="password" placeholder="At least 4 characters" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
                 </div>
                 <div>
-                  <label class="block text-sm font-bold text-slate-700 mb-1.5">🔐 ยืนยันรหัสใหม่</label>
-                  <input type="password" placeholder="••••" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+                  <label class="block text-sm font-bold text-slate-700 mb-1.5">Confirm New Password</label>
+                  <input type="password" placeholder="Confirm new password" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
                 </div>
                 <button onclick="alert('Demo: Changed Password');" class="w-full py-3 rounded-xl border-none text-white font-extrabold text-sm cursor-pointer bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25">
-                  เปลี่ยนรหัสผ่าน
+                  Change Password
                 </button>
-            </div>
-        </div>
-
-        <div id="tab-general" class="settings-tab-content hidden">
-            <h3 class="text-base font-extrabold text-slate-800 mb-1">General Settings</h3>
-            <p class="text-sm text-slate-500 mb-5">ตั้งค่าทั่วไปของระบบ</p>
-            <div class="max-w-sm space-y-5">
-                <div>
-                  <label class="block text-sm font-bold text-slate-700 mb-1.5">🏨 Hotel Name</label>
-                  <input type="text" value="Andaman Beach Suites" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
-                </div>
-                <div>
-                  <label class="block text-sm font-bold text-slate-700 mb-1.5">Language (ภาษา)</label>
-                  <select class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm bg-white outline-none focus:border-blue-500 cursor-pointer">
-                    <option value="en">🇬🇧 English</option>
-                    <option value="th">🇹🇭 ภาษาไทย</option>
-                  </select>
-                </div>
-                <div class="pt-4 border-t border-slate-200">
-                  <h4 class="text-sm font-bold text-slate-700 mb-3">ℹ️ System Info</h4>
-                  <div class="space-y-2 text-sm text-slate-500">
-                    <div class="flex justify-between"><span>Version</span><span class="font-mono font-bold text-slate-700">2.0.0</span></div>
-                    <div class="flex justify-between"><span>Buildings</span><span class="font-bold text-slate-700">A, B</span></div>
-                    <div class="flex justify-between"><span>Framework</span><span class="font-mono font-bold text-slate-700">Vanilla JS / Tailwind</span></div>
-                  </div>
-                </div>
             </div>
         </div>
 
@@ -788,14 +792,14 @@ function toggleAPDate() {
 
         <div class="dashboard-analytic-card dashboard-analytic-card--wide mt-6">
                 <div class="dashboard-card__header flex justify-between items-center">
-                    <span>📋 Active Maintenance Tasks (รายการแจ้งซ่อม)</span>
+                    <span>Active Maintenance Tasks (Pending vs Resolved)</span>
                     <span id="maintTaskCount" class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold">0 Pending</span>
                 </div>
                 <div class="dashboard-table-wrap mt-4 max-h-60 overflow-y-auto">
                     <table class="dashboard-table w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-gray-50 text-gray-600 text-sm border-b">
-                                <th class="p-3 font-semibold rounded-tl-lg">Type (ประเภท)</th>
+                               <th class="p-3 font-semibold rounded-tl-lg">Type (ประเภท)</th>
                                 <th class="p-3 font-semibold">Room (ห้อง)</th>
                                 <th class="p-3 font-semibold">Details (รายละเอียด)</th>
                                 <th class="p-3 font-semibold rounded-tr-lg">Status (สถานะ)</th>
@@ -808,21 +812,10 @@ function toggleAPDate() {
             </div>
 
         <div class="dashboard-grid mt-6">
-            <div class="dashboard-analytic-card">
-                <div class="dashboard-card__header">Room Occupancy</div>
+            <div class="dashboard-analytic-card dashboard-analytic-card--wide">
+                <div class="dashboard-card__header">Maintenance by Category (Pending vs Resolved)</div>
                 <div class="dashboard-chart-wrap">
-                    <canvas id="occupancyChart" class="dashboard-chart"></canvas>
-                </div>
-                <div class="dashboard-legend">
-                    <div><span class="dashboard-legend__dot" style="background:#7c3aed"></span>Occupied</div>
-                    <div><span class="dashboard-legend__dot" style="background:#e2e8f0"></span>Vacant</div>
-                </div>
-            </div>
-            
-            <div class="dashboard-analytic-card">
-                <div class="dashboard-card__header">Maintenance Issues</div>
-                <div class="dashboard-chart-wrap">
-                    <canvas id="maintenanceChart" class="dashboard-chart"></canvas>
+                    <canvas id="maintenanceCompareChart" class="dashboard-chart"></canvas>
                 </div>
             </div>
             
@@ -844,10 +837,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const REAL_ROOM_TYPES = [];
 
     const REAL_MAINTENANCE = [
-        { name: 'WiFi Install / Network Repair', icon: '📶' },
-        { name: 'Aircon Cleaning / Repair',       icon: '❄️' },
-        { name: 'Housekeeping',                   icon: '🧹' },
-        { name: 'General Maintenance',            icon: '🔧' }
+        { name: 'WiFi Install / Network Repair', icon: 'เนยโ€เธ–' },
+        { name: 'Aircon Cleaning / Repair',       icon: 'เนยยเนเธย' },
+        { name: 'Housekeeping',                   icon: 'เนยเธเธ' },
+        { name: 'General Maintenance',            icon: 'เนยโ€เธ' }
     ];
 
     async function apiRequest(action, payload = {}) {
@@ -905,12 +898,12 @@ document.addEventListener('DOMContentLoaded', function() {
             apiRequest('get_maintenance_categories')
         ]);
 
-        if (typesRes && Array.isArray(typesRes.room_types) && typesRes.room_types.length) {
+        if (typesRes && Array.isArray(typesRes.room_types)) {
             roomTypes = typesRes.room_types;
             localStorage.setItem('room_types_final_v1', JSON.stringify(roomTypes));
         }
 
-        if (maintRes && Array.isArray(maintRes.maintenance_categories) && maintRes.maintenance_categories.length) {
+        if (maintRes && Array.isArray(maintRes.maintenance_categories)) {
             maintenanceCats = maintRes.maintenance_categories;
             localStorage.setItem('maint_cats_final_v1', JSON.stringify(maintenanceCats));
         }
@@ -951,16 +944,52 @@ function refreshServiceSidebar() {
         const legend = document.getElementById('room-type-legend');
         if (!legend) return;
         legend.innerHTML = '';
+        const selectedTypeId = String(window.selectedLegendRoomTypeId || '').trim();
         roomTypes.forEach((item) => {
-            const row = document.createElement('div');
+            const typeId = item.id || '';
+            const row = document.createElement('button');
+            row.type = 'button';
             row.className = 'legend-row';
+            row.style.width = '100%';
+            row.style.textAlign = 'left';
+            row.style.border = 'none';
+            row.style.background = 'transparent';
+            row.style.padding = '2px 4px';
+            row.style.borderRadius = '8px';
+            row.style.cursor = 'pointer';
+            row.dataset.typeId = typeId;
+            if (selectedTypeId && selectedTypeId === typeId) {
+                row.style.background = 'rgba(59,130,246,0.12)';
+                row.style.fontWeight = '700';
+            }
             row.innerHTML = `
                 <span class="legend-box" style="background:${item.color}; border:1px solid rgba(0,0,0,0.25);"></span>
                 ${item.name}
             `;
+            row.addEventListener('click', () => {
+                if (!typeId) return;
+                window.selectedLegendRoomTypeId = (window.selectedLegendRoomTypeId === typeId) ? '' : typeId;
+                applyRoomTypeLegendHighlight();
+                renderRoomLegend();
+            });
             legend.appendChild(row);
         });
     }
+
+    function applyRoomTypeLegendHighlight() {
+        const selectedTypeId = String(window.selectedLegendRoomTypeId || '').trim();
+        document.querySelectorAll('.room').forEach(room => {
+            const roomTypeId = String(room.getAttribute('data-type') || '').trim();
+            room.classList.remove('is-type-dimmed-force', 'is-type-highlight-force');
+            if (!selectedTypeId) return;
+            if (roomTypeId === selectedTypeId) {
+                room.classList.add('is-type-highlight-force');
+            } else {
+                room.classList.add('is-type-dimmed-force');
+            }
+        });
+    }
+    window.applyRoomTypeLegendHighlight = applyRoomTypeLegendHighlight;
 
     function renderRoomTypeSelect() {
         const select = document.getElementById('editRoomType');
@@ -1054,7 +1083,6 @@ function refreshServiceSidebar() {
         }
     });
 
-    // --- สคริปต์สลับแท็บ Settings แบบ React ---
     document.querySelectorAll('.settings-tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.settings-tab-btn').forEach(b => {
@@ -1110,7 +1138,7 @@ function refreshServiceSidebar() {
             alert("🔒 Staff only");
             return;
         }
-        // โหลดข้อมูลล่าสุดจาก DB ก่อนเปิด Modal
+        
         syncFromDb().then(() => {
             adminModal.classList.remove('hidden');
         });
@@ -1161,10 +1189,10 @@ function refreshServiceSidebar() {
 
     // --- Start Initialization ---
     ensureRoomTypeIds();
-    syncFromDb(); // ดึงข้อมูลจากฐานข้อมูลมาแสดงผลตั้งแต่เริ่มโหลดหน้า
+    syncFromDb(); 
 });
 </script>
-<script src="js/datepicker.js"></script>
+<script src="js/datepicker.js?v=20260226b"></script>
 <script>
     // Initialize the reusable DatePicker and wire the header button
     (function(){
@@ -1194,6 +1222,12 @@ function refreshServiceSidebar() {
         }
     })();
 </script>
-<script src="js/app.js?v=20260225i"></script>
+<script src="js/app.js?v=20260226s"></script>
 </body>
 </html>
+
+
+
+
+
+

@@ -18,6 +18,41 @@ function json_err(string $message, int $code = 400): void
     exit;
 }
 
+function decode_room_image(?string $raw): ?string
+{
+    $raw = trim((string)$raw);
+    if ($raw === '') return null;
+
+    $base64 = $raw;
+    if (preg_match('/^data:[^;]+;base64,(.*)$/s', $raw, $m)) {
+        $base64 = trim((string)$m[1]);
+    }
+
+    $bin = base64_decode($base64, true);
+    if ($bin === false) return null;
+    return $bin;
+}
+
+function encode_room_image(?string $bin): string
+{
+    if ($bin === null || $bin === '') return '';
+    $mime = 'image/jpeg';
+    try {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $detected = (string)$finfo->buffer($bin);
+        if ($detected !== '') $mime = $detected;
+    } catch (Throwable $e) {
+        // keep default mime
+    }
+    return 'data:' . $mime . ';base64,' . base64_encode($bin);
+}
+
+function map_room_row_with_image(array $row): array
+{
+    $row['room_image'] = encode_room_image(isset($row['room_image']) ? (string)$row['room_image'] : null);
+    return $row;
+}
+
 try {
     $pdo = get_pdo();
     ensure_tables($pdo);
@@ -147,19 +182,21 @@ switch ($action) {
         if ($building === '' || $roomId === '') {
             json_err('Missing building or room_id');
         }
-        $stmt = $pdo->prepare('SELECT building, room_id, guest_name, type_id AS room_type, room_note, maint_status, maint_note, ap_installed, ap_date AS ap_install_date, bed_badge FROM rooms_status WHERE building = ? AND room_id = ?');
+        $stmt = $pdo->prepare('SELECT building, room_id, guest_name, type_id AS room_type, room_note, maint_status, maint_note, ap_installed, ap_date AS ap_install_date, bed_badge, room_image FROM rooms_status WHERE building = ? AND room_id = ?');
         $stmt->execute([$building, $roomId]);
         $row = $stmt->fetch();
-        json_ok(['room' => $row ?: null]);
+        json_ok(['room' => $row ? map_room_row_with_image($row) : null]);
     }
     case 'get_all_room_states': {
         $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
         if ($building === '') {
             json_err('Missing building');
         }
-        $stmt = $pdo->prepare('SELECT building, room_id, guest_name, type_id AS room_type, room_note, maint_status, maint_note, ap_installed, ap_date AS ap_install_date, bed_badge FROM rooms_status WHERE building = ?');
+        $stmt = $pdo->prepare('SELECT building, room_id, guest_name, type_id AS room_type, room_note, maint_status, maint_note, ap_installed, ap_date AS ap_install_date, bed_badge, room_image FROM rooms_status WHERE building = ?');
         $stmt->execute([$building]);
-        json_ok(['rooms' => $stmt->fetchAll()]);
+        $rows = $stmt->fetchAll();
+        $rows = array_map('map_room_row_with_image', $rows);
+        json_ok(['rooms' => $rows]);
     }
     case 'get_room_snapshots': {
         $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
@@ -168,12 +205,89 @@ switch ($action) {
             json_err('Missing building or snapshot_date');
         }
         $stmt = $pdo->prepare('
-            SELECT building, room_id, guest_name, type_id AS room_type, room_note, maint_status, maint_note, ap_installed, ap_date AS ap_install_date, bed_badge
+            SELECT building, room_id, guest_name, type_id AS room_type, room_note, maint_status, maint_note, ap_installed, ap_date AS ap_install_date, bed_badge, room_image
             FROM room_status_history
             WHERE building = ? AND snapshot_date = ?
         ');
         $stmt->execute([$building, $date]);
-        json_ok(['rooms' => $stmt->fetchAll()]);
+        $rows = $stmt->fetchAll();
+        $rows = array_map('map_room_row_with_image', $rows);
+        json_ok(['rooms' => $rows]);
+    }
+    case 'get_maintenance_tasks': {
+        $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
+        if ($building === '') {
+            json_err('Missing building');
+        }
+
+        // Keep pending tasks aligned with current room status in DB.
+        $deleteStalePending = $pdo->prepare("
+            DELETE t
+            FROM maintenance_tasks t
+            LEFT JOIN rooms_status r
+              ON r.building = t.building AND r.room_id = t.room_id
+            WHERE t.building = ?
+              AND t.status = 'pending'
+              AND (r.room_id IS NULL OR COALESCE(r.maint_status, '') = '')
+        ");
+        $deleteStalePending->execute([$building]);
+
+        $syncType = $pdo->prepare("
+            UPDATE maintenance_tasks t
+            JOIN rooms_status r
+              ON r.building = t.building AND r.room_id = t.room_id
+            SET t.type = r.maint_status,
+                t.updated_at = CURRENT_TIMESTAMP
+            WHERE t.building = ?
+              AND t.status = 'pending'
+              AND COALESCE(r.maint_status, '') <> ''
+              AND t.type <> r.maint_status
+        ");
+        $syncType->execute([$building]);
+
+        $stmt = $pdo->prepare('
+            SELECT id, building, room_id, type, note, reported_date, resolved_date, status, updated_at
+            FROM maintenance_tasks
+            WHERE building = ?
+            ORDER BY reported_date DESC, id DESC
+        ');
+        $stmt->execute([$building]);
+        json_ok(['tasks' => $stmt->fetchAll()]);
+    }
+    case 'resolve_maintenance_task': {
+        $taskId = (int)($input['task_id'] ?? $_REQUEST['task_id'] ?? 0);
+        $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
+        if ($taskId <= 0 || $building === '') {
+            json_err('Missing task_id or building');
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $sel = $pdo->prepare('SELECT id, room_id, status FROM maintenance_tasks WHERE id = ? AND building = ? LIMIT 1');
+            $sel->execute([$taskId, $building]);
+            $task = $sel->fetch();
+            if (!$task) {
+                $pdo->rollBack();
+                json_err('Task not found', 404);
+            }
+
+            if ((string)($task['status'] ?? '') !== 'resolved') {
+                $upd = $pdo->prepare("UPDATE maintenance_tasks SET status = 'resolved', resolved_date = CURDATE() WHERE id = ?");
+                $upd->execute([$taskId]);
+            }
+
+            $roomId = trim((string)$task['room_id']);
+            if ($roomId !== '') {
+                $clear = $pdo->prepare("UPDATE rooms_status SET maint_status = '', maint_note = '' WHERE building = ? AND room_id = ?");
+                $clear->execute([$building, $roomId]);
+            }
+
+            $pdo->commit();
+            json_ok();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            json_err('Cannot resolve maintenance task', 500);
+        }
     }
     case 'save_room_snapshot': {
         $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
@@ -190,13 +304,14 @@ switch ($action) {
         $apInstalled = (int)($input['ap_installed'] ?? $_REQUEST['ap_installed'] ?? 0);
         $apDate = trim((string)($input['ap_install_date'] ?? $_REQUEST['ap_install_date'] ?? ''));
         $bedBadge = trim((string)($input['bed_badge'] ?? $_REQUEST['bed_badge'] ?? ''));
+        $roomImageBin = decode_room_image((string)($input['room_image'] ?? $_REQUEST['room_image'] ?? ''));
         $apDateValue = $apDate === '' ? null : $apDate;
 
         $stmt = $pdo->prepare("
             INSERT INTO room_status_history
-                (building, room_id, snapshot_date, guest_name, type_id, room_note, maint_status, maint_note, ap_installed, ap_date, bed_badge)
+                (building, room_id, snapshot_date, guest_name, type_id, room_note, maint_status, maint_note, ap_installed, ap_date, bed_badge, room_image)
             VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 guest_name = VALUES(guest_name),
                 type_id = VALUES(type_id),
@@ -205,9 +320,10 @@ switch ($action) {
                 maint_note = VALUES(maint_note),
                 ap_installed = VALUES(ap_installed),
                 ap_date = VALUES(ap_date),
-                bed_badge = VALUES(bed_badge)
+                bed_badge = VALUES(bed_badge),
+                room_image = VALUES(room_image)
         ");
-        $stmt->execute([$building, $roomId, $date, $guestName, $roomType, $roomNote, $maintStatus, $maintNote, $apInstalled, $apDateValue, $bedBadge]);
+        $stmt->execute([$building, $roomId, $date, $guestName, $roomType, $roomNote, $maintStatus, $maintNote, $apInstalled, $apDateValue, $bedBadge, $roomImageBin]);
         json_ok();
     }
     case 'get_room_items_snapshot': {
@@ -254,14 +370,15 @@ switch ($action) {
         $apInstalled = (int)($input['ap_installed'] ?? $_REQUEST['ap_installed'] ?? 0);
         $apDate = trim((string)($input['ap_install_date'] ?? $_REQUEST['ap_install_date'] ?? ''));
         $bedBadge = trim((string)($input['bed_badge'] ?? $_REQUEST['bed_badge'] ?? ''));
+        $roomImageBin = decode_room_image((string)($input['room_image'] ?? $_REQUEST['room_image'] ?? ''));
 
         $apDateValue = $apDate === '' ? null : $apDate;
 
         $stmt = $pdo->prepare("
             INSERT INTO rooms_status
-                (building, room_id, guest_name, type_id, room_note, maint_status, maint_note, ap_installed, ap_date, bed_badge)
+                (building, room_id, guest_name, type_id, room_note, maint_status, maint_note, ap_installed, ap_date, bed_badge, room_image)
             VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 guest_name = VALUES(guest_name),
                 type_id = VALUES(type_id),
@@ -270,9 +387,44 @@ switch ($action) {
                 maint_note = VALUES(maint_note),
                 ap_installed = VALUES(ap_installed),
                 ap_date = VALUES(ap_date),
-                bed_badge = VALUES(bed_badge)
+                bed_badge = VALUES(bed_badge),
+                room_image = VALUES(room_image)
         ");
-        $stmt->execute([$building, $roomId, $guestName, $roomType, $roomNote, $maintStatus, $maintNote, $apInstalled, $apDateValue, $bedBadge]);
+        $stmt->execute([$building, $roomId, $guestName, $roomType, $roomNote, $maintStatus, $maintNote, $apInstalled, $apDateValue, $bedBadge, $roomImageBin]);
+
+        if ($maintStatus !== '') {
+            $findPending = $pdo->prepare("
+                SELECT id
+                FROM maintenance_tasks
+                WHERE building = ? AND room_id = ? AND status = 'pending'
+                ORDER BY id DESC
+                LIMIT 1
+            ");
+            $findPending->execute([$building, $roomId]);
+            $pending = $findPending->fetch();
+
+            if ($pending && isset($pending['id'])) {
+                $updPending = $pdo->prepare("
+                    UPDATE maintenance_tasks
+                    SET type = ?, note = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ");
+                $updPending->execute([$maintStatus, $maintNote, (int)$pending['id']]);
+            } else {
+                $insPending = $pdo->prepare("
+                    INSERT INTO maintenance_tasks (building, room_id, type, note, reported_date, status)
+                    VALUES (?, ?, ?, ?, CURDATE(), 'pending')
+                ");
+                $insPending->execute([$building, $roomId, $maintStatus, $maintNote]);
+            }
+        } else {
+            $resolvePending = $pdo->prepare("
+                UPDATE maintenance_tasks
+                SET status = 'resolved', resolved_date = CURDATE(), updated_at = CURRENT_TIMESTAMP
+                WHERE building = ? AND room_id = ? AND status = 'pending'
+            ");
+            $resolvePending->execute([$building, $roomId]);
+        }
         json_ok();
     }
     default:

@@ -48,11 +48,11 @@ async function syncTypeAndMaintFromDbB() {
         apiRequest('get_maintenance_categories')
     ]);
 
-    if (typesRes && Array.isArray(typesRes.room_types) && typesRes.room_types.length) {
+    if (typesRes && Array.isArray(typesRes.room_types)) {
         localStorage.setItem('room_types_final_v1', JSON.stringify(typesRes.room_types));
     }
 
-    if (maintRes && Array.isArray(maintRes.maintenance_categories) && maintRes.maintenance_categories.length) {
+    if (maintRes && Array.isArray(maintRes.maintenance_categories)) {
         localStorage.setItem('maint_cats_final_v1', JSON.stringify(maintRes.maintenance_categories));
     }
 }
@@ -1135,7 +1135,7 @@ function getMaintenanceCategories() {
         const list = JSON.parse(localStorage.getItem('maint_cats_final_v1')) || [];
         if (list.length) return list;
     } catch { }
-    return DEFAULT_MAINT_CATS;
+    return [];
 }
 
 function getRoomTypeNameMap() {

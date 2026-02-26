@@ -5,57 +5,95 @@
   <title>Building B </title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260226z">
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
     /* =========================================
-       LAYOUT: ซ้าย - กลาง - ขวา
+       LAYOUT:  -  - 
        ========================================= */
     .plan-wrapper {
         display: flex;
         justify-content: center;
         align-items: flex-start;
         width: 100%;
-        padding: 40px 20px;
-        gap: 40px;
-        overflow-x: auto;
-        background-color: #f8fafc;
+        position: relative;
+        padding-top: 16px;
+        padding-bottom: 24px;
+        padding-left: clamp(250px, 22vw, 320px) !important;
+        padding-right: clamp(250px, 22vw, 320px) !important;
+        box-sizing: border-box;
+        overflow: visible;
     }
 
-    .side-panel {
-        width: 240px;
-        flex-shrink: 0;
+    .legend-block.main-legend {
+        position: fixed !important;
+        top: 96px !important;
+        right: 16px !important;
+        left: auto !important;
+        width: 240px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+        z-index: 4000 !important;
+    }
+
+    .legend-block.left-info-panel {
+        position: fixed !important;
+        top: 96px !important;
+        left: 16px !important;
+        right: auto !important;
+        width: 240px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+        z-index: 4000 !important;
+    }
+
+    @media (max-width: 1024px) {
+        .plan-wrapper {
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+        }
+
+        .legend-block.main-legend,
+        .legend-block.left-info-panel {
+            position: static !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            width: min(100%, 560px) !important;
+            max-height: none !important;
+            margin: 0 auto 12px !important;
+        }
     }
 
     .building-b-container {
         display: flex;
         flex-direction: column;
-        /* ไม่ใช้ gap ระหว่างชั้น เพื่อให้เส้นขอบทับกันเนียนเหมือนตาราง */
+        /*  gap   */
     }
 
     /* =========================================
-       FLOOR ROW (แถวของแต่ละชั้น)
+       FLOOR ROW ()
        ========================================= */
     .floor-row {
         display: flex;
-        /* 🔥 สำคัญมาก: จัดชิดซ้าย เพื่อให้ห้อง 01 ตรงกันทุกชั้นตามรูป */
+        /*  :   01  */
         justify-content: flex-start; 
         
-        /* 🔥 Gap 0 เพื่อให้ห้องติดกันเป็นตาราง */
+        /*  Gap 0  */
         gap: 0; 
     }
 
     /* =========================================
-       ROOM BOX (กล่องห้อง)
+       ROOM BOX ()
        ========================================= */
     .room {
         width: 100px;
         height: 70px;
-        background-color: #e2e8f0; /* สีพื้นหลัง default (สีเทาอ่อนๆ ตามรูป) */
-        border: 1px solid #64748b; /* เส้นขอบสีเข้มชัดเจน */
+        background-color: #e2e8f0; /*  default ( ) */
+        border: 1px solid #64748b; /*  */
         
-        /* เทคนิคซ่อนเส้นขอบซ้อนกัน (Optional: ถ้าอยากให้เนียนกริบ) */
+        /*  (Optional: ) */
         margin-right: -1px;
         margin-bottom: -1px;
 
@@ -69,18 +107,18 @@
     }
 
     .room:hover {
-        z-index: 10; /* ลอยขึ้นมาทับเส้นขอบคนอื่นตอนชี้ */
+        z-index: 10; /*  */
         border: 2px solid #000;
     }
 
-    /* เลขห้อง */
+    /*  */
     .room-num {
         font-size: 0.9rem;
         font-weight: 700;
         color: #0f172a;
     }
 
-    /* ชื่อแขก */
+    /*  */
     .guest-name {
         font-size: 0.7rem;
         color: #334155;
@@ -119,54 +157,97 @@
         border: 1px solid white;
     }
 
+    .room.is-type-dimmed-force {
+        opacity: 0.18 !important;
+        filter: grayscale(100%) !important;
+    }
+    .room.is-type-highlight-force {
+        opacity: 1 !important;
+        filter: none !important;
+    }
     .modal-overlay.hidden { display: none !important; }
   </style>
 </head>
 
-<body data-building-image="img/Andaman2.jpg" data-building-title="Building B (Annex)">
+<body style="margin:0;padding:0;" data-building-id="B" data-building-image="img/Andaman2.jpg" data-building-title="Building B (Annex)">
 
-<header class="page-navbar">
-  <div class="nav-left">
-    <a href="index.html" class="back-link">← Back to Home</a>
-    <div class="nav-title">
-        <h1>Building B - ABSC</h1>
-        <span>Andaman Beach Suites Hotel</span>
-    </div>
-  </div>
-   <div class="flex items-center gap-2"> 
-    <button id="edit-mode-btn" class="edit-mode-base nav-btn-shape text-xs font-black uppercase tracking-wide">
-        <span id="edit-icon"></span> <span id="edit-mode-text" class="text-xs font-black uppercase tracking-wide">LOCK MODE</span>
-    </button>
- 
-    <a href="building-a.html" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 hover:shadow-lg transition-all border-none cursor-pointer text-xs font-black uppercase tracking-wide nav-btn-shape" style="text-decoration: none;">
-        <span>🏢</span> <span>GO TO BUILDING A</span>
-    </a>
-
-    <button id="adminBtn" class="flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-slate-800 text-slate-800 text-xs font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm">
-        <span id="btnText">STAFF LOGIN</span>
-        <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+<header class="page-navbar sticky top-0 z-[3000] bg-white/85 backdrop-blur-md border-b border-slate-200 shadow-sm !p-0">
+  <div class="flex flex-wrap items-center justify-between px-5 py-3 w-full gap-y-3">
+    <div class="flex items-center gap-4">
+      <a href="index.html" class="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors border-none bg-transparent cursor-pointer no-underline">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+          <path d="m15 18-6-6 6-6"/>
         </svg>
-    </button>
+        <span class="text-xs font-semibold">Home</span>
+      </a>
+      <div class="h-6 w-px bg-slate-300"></div>
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center text-white font-bold text-lg shadow-md">B</div>
+        <div>
+          <h1 class="text-sm font-extrabold text-slate-800 leading-none tracking-wide m-0">BUILDING B</h1>
+          <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase m-0">ABSC</span>
+        </div>
+      </div>
+    </div>
 
-    <button id="dashboardBtn" class="dashboard-fab dashboard-fab-inline">Dashboard</button>
-    <button id="open-date-picker-btn" title="Select Date" class="h-9 w-9 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition text-base font-black border-none cursor-pointer">📅</button>
+    <div class="flex flex-wrap items-center gap-1.5">
+      <button id="edit-mode-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
+        <span id="edit-icon"></span>
+        <span id="edit-mode-text">LOCK MODE</span>
+      </button>
+      <button id="admin-btn-canva" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>SETTINGS</span>
+      </button>
+      <button onclick="enableQuickMode()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none cursor-pointer text-orange-600 bg-orange-50 hover:bg-orange-100"> QUICK UPDATE</button>
+      <button id="dashboardBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        <span>DASHBOARD</span>
+      </button>
+      <button id="open-date-picker-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+        <span>DATE</span>
+      </button>
+      <div class="h-6 w-px bg-slate-300 mx-1"></div>
+      <a href="building-a.html" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none cursor-pointer no-underline bg-sky-50 text-sky-700 hover:bg-sky-100 hover:text-sky-800">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+        <span>BUILDING A</span>
+      </a>
+    </div>
+
+    <button id="adminBtn" class="flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black uppercase tracking-wide transition-all duration-300 cursor-pointer border-2 border-slate-800 text-slate-800 hover:bg-slate-800 hover:text-white group">
+      <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 transform group-hover:translate-x-1 transition-transform"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
+      <span id="btnText">STAFF LOGIN</span>
+    </button>
   </div>
 </header>
-
-<div id="dateStrip" class="hidden"></div>
+<div id="quick-status-bar" class="hidden sticky top-[64px] z-[2500] bg-slate-900 shadow-xl border-b border-white/10 overflow-x-auto">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+      <span class="text-white text-xs font-black uppercase tracking-widest">Quick Mode:</span>
+    </div>
+    <div id="quick-tool-options" class="flex gap-2"></div>
+    <button onclick="disableQuickMode()" class="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase transition-all border-none cursor-pointer shadow-lg shadow-red-500/20">Exit Mode</button>
+  </div>
+</div>
 
 <div class="plan-wrapper">
-    <div class="side-panel">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 sticky top-24">
-            <h4 class="text-sm font-bold text-gray-800 mb-3 border-b pb-2 uppercase tracking-wider">Service Status</h4>
-            <div id="service-sidebar-list" class="flex flex-col gap-3"></div>
-        </div>
+  <div class="building-plan">
+    <div class="legend-block main-legend">
+      <h4 class="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Room Type</h4>
+      <div id="room-type-legend" class="legend-grid"></div>
+    </div>
+
+    <div class="legend-block left-info-panel">
+      <div class="flex items-center justify-between mb-3">
+        <h4 class="text-sm font-bold text-gray-800 uppercase tracking-wider m-0">Service Status</h4>
+      </div>
+      <div id="service-sidebar-list" class="flex flex-col gap-3"></div>
     </div>
 
     <div class="building-b-container">
-        
-        <div class="floor-row">
+      <div class="floor-row">
             <div class="room" data-room-id="2501">2501</div>
             <div class="room" data-room-id="2502">2502</div>
             <div class="room" data-room-id="2503">2503</div>
@@ -222,12 +303,7 @@
 
     </div>
 
-    <div class="side-panel">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 sticky top-24">
-            <h4 class="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Room Types</h4>
-            <div id="room-types-list-mini" class="text-xs space-y-2"></div>
-        </div>
-    </div>
+  </div>
 </div>
 
 <div id="roomEditModal" class="modal-overlay hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -242,35 +318,35 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-5">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">👤 Guest Name</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Guest Name</label>
                         <input type="text" id="editGuestName" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 input-focus text-gray-700">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">🛏️ Room Type</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Room Type</label>
                         <input type="hidden" id="editRoomType" value="">
                         <div id="roomTypeSelect" class="room-type-select">
                             <button type="button" id="roomTypeSelectBtn" class="room-type-select__btn">
                                 <span id="roomTypeSelectColor" class="room-type-select__color"></span>
                                 <span id="roomTypeSelectLabel">Select Room Type</span>
-                                <span class="room-type-select__chev">▾</span>
+                                <span class="room-type-select__chev"></span>
                             </button>
                             <div id="roomTypeSelectList" class="room-type-select__list hidden"></div>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">🛠️ Maintenance Category</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Maintenance Category</label>
                         <select id="editMaintStatus" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 input-focus text-gray-700 bg-white">
                             <option value="">(None)</option>
-                            <option value="wifi">📶 WiFi Install / Network Repair</option>
-                            <option value="air">❄️ Aircon Cleaning / Repair</option>
-                            <option value="clean">🧹 Housekeeping</option>
-                            <option value="fix">🔧 General Maintenance</option>
+                            <option value="wifi"> WiFi Install / Network Repair</option>
+                            <option value="air"> Aircon Cleaning / Repair</option>
+                            <option value="clean"> Housekeeping</option>
+                            <option value="fix"> General Maintenance</option>
                         </select>
                     </div>
                 </div>
                 <div class="space-y-5">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">📝 Maintenance Note</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Maintenance Note</label>
                         <textarea id="maintNote" rows="4" placeholder="e.g., install date / assigned staff / details" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 input-focus text-gray-700 bg-white"></textarea>
                         <p class="text-xs text-gray-500 mt-1">This note appears when hovering the maintenance icon.</p>
                     </div>
@@ -283,7 +359,7 @@
                         </button>
                     </div>
                     <div class="pt-4 border-t border-gray-200">
-                        <label class="block text-sm font-bold text-blue-600 mb-2">📡 Access Point (AP)</label>
+                        <label class="block text-sm font-bold text-blue-600 mb-2">Access Point (AP)</label>
                         <div class="flex items-center gap-3 mb-2">
                             <input type="checkbox" id="hasAP" class="checkbox-custom" onchange="toggleAPDate()">
                             <span class="text-sm font-medium text-gray-700">AP Installed</span>
@@ -310,12 +386,12 @@
             <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
-                        <div class="flex items-center gap-3 mb-2"><span class="text-3xl">🏠</span><h1 id="infoRoomTitle" class="text-2xl md:text-3xl font-bold text-white">Room Title</h1></div>
-                        <p class="text-white text-sm md:text-base opacity-90">Room <span id="infoRoomIdDisplay">#000</span> • <span id="itemCount">0</span> items</p>
+                        <div class="flex items-center gap-3 mb-2"><span class="text-3xl"></span><h1 id="infoRoomTitle" class="text-2xl md:text-3xl font-bold text-white">Room Title</h1></div>
+                        <p class="text-white text-sm md:text-base opacity-90">Room <span id="infoRoomIdDisplay">#000</span>  <span id="itemCount">0</span> items</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="openAddItemModal()" class="btn-primary bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg cursor-pointer border-none">Add Item</button>
-                        <button onclick="closeInfoModal()" class="bg-white/20 hover:bg-white/30 text-white p-3 rounded-xl transition cursor-pointer border-none">✖</button>
+                        <button onclick="closeInfoModal()" class="bg-white/20 hover:bg-white/30 text-white p-3 rounded-xl transition cursor-pointer border-none"></button>
                     </div>
                 </div>
             </div>
@@ -324,7 +400,7 @@
             <div class="flex gap-2 overflow-x-auto pb-4" id="category-filters"></div>
             <div id="items-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-10"></div>
             <div id="empty-state" class="hidden text-center py-16">
-                <div class="text-6xl mb-4">📭</div>
+                <div class="text-6xl mb-4"></div>
                 <h3 class="text-slate-700 text-xl font-semibold mb-2">No items yet</h3>
                 <button onclick="openAddItemModal()" class="btn-primary bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 cursor-pointer border-none">Add First Item</button>
             </div>
@@ -337,14 +413,14 @@
     <div class="modal-content-box bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative z-10">
         <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex justify-between items-center">
             <h2 class="text-xl font-bold text-white">Add New Item</h2>
-            <button onclick="closeAddItemModal()" class="text-white/90 hover:text-white p-1 cursor-pointer bg-transparent border-none">✖</button>
+            <button onclick="closeAddItemModal()" class="text-white/90 hover:text-white p-1 cursor-pointer bg-transparent border-none"></button>
         </div>
         <div class="p-6 max-h-[80vh] overflow-y-auto">
             <div class="space-y-4">
                 <div class="mb-5">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Image</label>
                     <div id="image-dropzone" class="image-preview image-dropzone relative w-full h-40 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden bg-slate-50">
-                        <div id="image-placeholder" class="text-center"><span class="text-4xl mb-2 block">📷</span><span class="text-slate-500 text-sm">Drag or click to upload</span></div>
+                        <div id="image-placeholder" class="text-center"><span class="text-4xl mb-2 block"></span><span class="text-slate-500 text-sm">Drag or click to upload</span></div>
                         <img id="preview-img" class="hidden absolute inset-0 w-full h-full object-cover">
                         <input type="file" id="item-image-file" accept="image/*" class="hidden">
                     </div>
@@ -362,10 +438,120 @@
     </div>
 </div>
 
+<div id="admin-modal-canva" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 font-['Inter',sans-serif]">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modal-backdrop-canva"></div>
+  
+  <div class="relative w-full max-w-[780px] h-[85vh] bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col animate-[popIn_0.25s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+    
+    <div class="px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-800 to-slate-700">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-extrabold text-white tracking-wide m-0">Settings</h2>
+          <p class="text-xs text-slate-400 m-0">Manage system configuration</p>
+        </div>
+      </div>
+      <button id="close-modal-canva" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors border-none cursor-pointer bg-transparent">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="flex flex-1 min-h-0">
+      
+      <div class="w-[200px] bg-slate-50 border-r border-slate-200 py-3 flex-shrink-0">
+        <button data-target="tab-room-types" class="settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-white text-slate-800 shadow-sm border-r-2 border-r-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+          Room Types
+        </button>
+        <button data-target="tab-maintenance" class="settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-transparent text-slate-500 hover:bg-white/60 hover:text-slate-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          Maintenance
+        </button>
+        <button data-target="tab-admin" class="settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-transparent text-slate-500 hover:bg-white/60 hover:text-slate-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+          Admin Password
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6 bg-white relative">
+        
+        <div id="tab-room-types" class="settings-tab-content block">
+          <h3 class="text-base font-extrabold text-slate-800 mb-1">Room Types</h3>
+          <p class="text-sm text-slate-500 mb-5"> </p>
+          <div id="room-types-list" class="space-y-2 mb-5 h-[40vh] overflow-y-auto pr-2"></div>
+          <form id="room-type-form" class="flex items-end gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 mt-auto">
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-slate-600 mb-1">Label</label>
+              <input type="text" id="room-type-name" placeholder="e.g. Penthouse" required class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-400 bg-white">
+            </div>
+            <div class="w-20">
+              <label class="block text-xs font-bold text-slate-600 mb-1">Color</label>
+              <input type="color" id="room-type-color" value="#3b82f6" class="w-full h-9 p-0 rounded-lg border border-slate-200 cursor-pointer overflow-hidden bg-white">
+            </div>
+            <button type="submit" class="h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-bold border-none cursor-pointer hover:bg-blue-700 transition-colors flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Add
+            </button>
+          </form>
+        </div>
+
+        <div id="tab-maintenance" class="settings-tab-content hidden">
+          <h3 class="text-base font-extrabold text-slate-800 mb-1">Maintenance Categories</h3>
+          <p class="text-sm text-slate-500 mb-5">Manage maintenance categories shown in Service Status</p>
+          <div id="maintenance-list" class="space-y-2 mb-5 h-[35vh] overflow-y-auto pr-2"></div>
+          <form id="maintenance-form" class="p-4 bg-purple-50/50 rounded-xl border border-purple-100 space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Category Name</label>
+              <input type="text" id="maintenance-name" placeholder="e.g., Electrical System" required class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-purple-400 bg-white">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-2">Select Icon</label>
+              <div class="flex flex-wrap gap-2" id="icon-selector">\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-purple-500 bg-purple-100 shadow-md scale-110 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <button type="button" class="icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all" data-icon=""></button>\n                <input type="hidden" id="selected-icon" value="">
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white text-sm font-bold border-none cursor-pointer hover:bg-purple-700 transition-colors flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Add Category
+            </button>
+          </form>
+        </div>
+
+        <div id="tab-admin" class="settings-tab-content hidden">
+          <h3 class="text-base font-extrabold text-slate-800 mb-1">Admin Password</h3>
+          <p class="text-sm text-slate-500 mb-5">Change password for Staff Login</p>
+          <div class="max-w-sm space-y-4">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1.5">Current Password</label>
+              <input type="password" placeholder="" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1.5">New Password</label>
+              <input type="password" placeholder="At least 4 characters" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1.5">New Password</label>
+              <input type="password" placeholder="" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+            </div>
+            <button onclick="alert('Demo: Changed Password');" class="w-full py-3 rounded-xl border-none text-white font-extrabold text-sm cursor-pointer bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25">
+              Change Password
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</div>
+
 <div id="adminModal" class="modal-overlay hidden">
   <div class="modal-box">
     <div class="mb-6">
-        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">🔒</div>
+        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner"></div>
         <h2 class="text-xl font-bold text-slate-800">Staff Login</h2>
         <p class="text-sm text-slate-500 mt-1">Please enter passcode to access</p>
     </div>
@@ -380,22 +566,62 @@
 <div id="dashboardModal" class="dashboard-modal hidden">
   <div class="dashboard-modal__panel">
     <div class="dashboard-modal__header">
-      <div><h3 class="dashboard-modal__title">Summary (Building B)</h3></div>
-      <div class="dashboard-modal__actions"><button id="dashboardClose" class="dashboard-btn">Close</button></div>
+      <div>
+      <h3 class="dashboard-modal__title">Summary (Building B)</h3>
+      <p class="dashboard-modal__subtitle">Maintenance categories and room types with print support</p>
+      </div>
+      <div class="dashboard-modal__actions">
+        <button id="dashboardPrint" class="dashboard-btn dashboard-btn--primary" aria-label="Print report">
+          <svg xmlns="http://www.w3.org/2000/svg" class="dashboard-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9V2h12v7" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <path d="M6 14h12v8H6z" />
+          </svg>
+        </button>
+        <button id="dashboardClose" class="dashboard-btn">Close</button>
+      </div>
     </div>
     <div id="dashboardContent" class="dashboard-modal__content">
-      <div class="dashboard-analytics">
+    <div class="dashboard-analytics">
+        
         <div id="dynamicSummaryRow" class="dashboard-summary-row"></div>
-        <div class="dashboard-grid mt-6">
-            <div class="dashboard-analytic-card"><div class="dashboard-card__header">Occupancy</div><div class="dashboard-chart-wrap"><canvas id="occupancyChart" class="dashboard-chart"></canvas></div></div>
-            <div class="dashboard-analytic-card"><div class="dashboard-card__header">Maintenance</div><div class="dashboard-chart-wrap"><canvas id="maintenanceChart" class="dashboard-chart"></canvas></div></div>
-            <div class="dashboard-analytic-card dashboard-analytic-card--wide"><div class="dashboard-card__header">Room Types</div><div id="roomTypeSummary" class="dashboard-table-wrap"></div></div>
-        </div>
+
         <div class="dashboard-analytic-card dashboard-analytic-card--wide mt-6">
-            <div class="dashboard-card__header">Active Maintenance Tasks</div>
-            <div class="dashboard-table-wrap mt-4 max-h-60 overflow-y-auto"><table class="dashboard-table w-full text-left border-collapse"><tbody id="maintTaskTableBody"></tbody></table></div>
+                <div class="dashboard-card__header flex justify-between items-center">
+                    <span>Active Maintenance Tasks</span>
+                    <span id="maintTaskCount" class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold">0 Pending</span>
+                </div>
+                <div class="dashboard-table-wrap mt-4 max-h-60 overflow-y-auto">
+                    <table class="dashboard-table w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 text-sm border-b">
+                                <th class="p-3 font-semibold rounded-tl-lg">Type</th>
+                                <th class="p-3 font-semibold">Room</th>
+                                <th class="p-3 font-semibold">Details</th>
+                                <th class="p-3 font-semibold rounded-tr-lg">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maintTaskTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+        <div class="dashboard-grid mt-6">
+            <div class="dashboard-analytic-card dashboard-analytic-card--wide">
+                <div class="dashboard-card__header">Maintenance by Category (Pending vs Resolved)</div>
+                <div class="dashboard-chart-wrap">
+                    <canvas id="maintenanceCompareChart" class="dashboard-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="dashboard-analytic-card dashboard-analytic-card--wide">
+                <div class="dashboard-card__header">Room Type Summary</div>
+                <div id="roomTypeSummary" class="dashboard-table-wrap"></div>
+            </div>
         </div>
-      </div>
+        
+    </div>
     </div>
   </div>
 </div>
@@ -410,8 +636,259 @@ function toggleAPDate() {
 }
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let roomTypes = [];
+  let maintenanceCats = [];
+
+  async function apiRequest(action, payload = {}) {
+    try {
+      const res = await fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const data = await res.json();
+      return data && data.ok ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function syncFromDb() {
+    const [typesRes, maintRes] = await Promise.all([
+      apiRequest('get_room_types'),
+      apiRequest('get_maintenance_categories')
+    ]);
+    roomTypes = (typesRes && Array.isArray(typesRes.room_types)) ? typesRes.room_types : [];
+    maintenanceCats = (maintRes && Array.isArray(maintRes.maintenance_categories)) ? maintRes.maintenance_categories : [];
+    localStorage.setItem('room_types_final_v1', JSON.stringify(roomTypes));
+    localStorage.setItem('maint_cats_final_v1', JSON.stringify(maintenanceCats));
+    if (typeof window.ensureRoomTypeIds === 'function') window.ensureRoomTypeIds();
+    renderRoomTypes();
+    renderRoomLegend();
+    renderRoomTypeSelect();
+    renderMaintenance();
+    if (typeof window.renderServiceSidebar === 'function') window.renderServiceSidebar();
+    if (typeof window.applyRoomStatesFromDb === 'function') window.applyRoomStatesFromDb();
+    if (typeof window.applyRoomTypeLegendHighlight === 'function') window.applyRoomTypeLegendHighlight();
+  }
+
+  function renderRoomTypes() {
+    const list = document.getElementById('room-types-list');
+    if (!list) return;
+    list.innerHTML = '';
+    roomTypes.forEach((item, index) => {
+      list.innerHTML += `<div class="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl">
+        <span class="w-5 h-5 rounded-full flex-shrink-0" style="background:${item.color};"></span>
+        <span class="flex-1 text-sm font-semibold text-slate-700">${item.name}</span>
+        <button onclick="deleteItem('room', ${index})" class="w-7 h-7 rounded-lg text-red-500 border-none bg-transparent cursor-pointer"></button>
+      </div>`;
+    });
+  }
+
+  function renderRoomLegend() {
+    const legend = document.getElementById('room-type-legend');
+    if (!legend) return;
+    legend.innerHTML = '';
+    const selectedTypeId = String(window.selectedLegendRoomTypeId || '').trim();
+    roomTypes.forEach((item) => {
+      const typeId = item.id || '';
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'legend-row';
+      row.style.width = '100%';
+      row.style.textAlign = 'left';
+      row.style.border = 'none';
+      row.style.background = 'transparent';
+      row.style.padding = '2px 4px';
+      row.style.borderRadius = '8px';
+      row.style.cursor = 'pointer';
+      row.dataset.typeId = typeId;
+      if (selectedTypeId && selectedTypeId === typeId) {
+        row.style.background = 'rgba(59,130,246,0.12)';
+        row.style.fontWeight = '700';
+      }
+      row.innerHTML = `<span class="legend-box" style="background:${item.color}; border:1px solid rgba(0,0,0,0.25);"></span>${item.name}`;
+      row.addEventListener('click', () => {
+        if (!typeId) return;
+        window.selectedLegendRoomTypeId = (window.selectedLegendRoomTypeId === typeId) ? '' : typeId;
+        applyRoomTypeLegendHighlight();
+        renderRoomLegend();
+      });
+      legend.appendChild(row);
+    });
+  }
+
+  function applyRoomTypeLegendHighlight() {
+    const selectedTypeId = String(window.selectedLegendRoomTypeId || '').trim();
+    document.querySelectorAll('.room').forEach(room => {
+      const roomTypeId = String(room.getAttribute('data-type') || '').trim();
+      room.classList.remove('is-type-dimmed-force', 'is-type-highlight-force');
+      if (!selectedTypeId) return;
+      if (roomTypeId === selectedTypeId) room.classList.add('is-type-highlight-force');
+      else room.classList.add('is-type-dimmed-force');
+    });
+  }
+  window.applyRoomTypeLegendHighlight = applyRoomTypeLegendHighlight;
+
+  function renderRoomTypeSelect() {
+    const select = document.getElementById('editRoomType');
+    const list = document.getElementById('roomTypeSelectList');
+    const label = document.getElementById('roomTypeSelectLabel');
+    const colorBox = document.getElementById('roomTypeSelectColor');
+    if (!select || !list) return;
+    select.innerHTML = '';
+    list.innerHTML = '';
+    roomTypes.forEach((item, idx) => {
+      const value = item.id || 'type-condo';
+      const text = String(item.name || '').replace(/\s*\([^)]*\)\s*/g, '').trim() || value;
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = text;
+      select.appendChild(opt);
+
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'room-type-select__item';
+      row.dataset.value = value;
+      row.innerHTML = `<span class="room-type-select__color" style="background:${item.color};"></span><span class="room-type-select__text">${text}</span>`;
+      row.addEventListener('click', () => {
+        select.value = value;
+        if (label) label.textContent = text;
+        if (colorBox) colorBox.style.background = item.color;
+        list.classList.add('hidden');
+      });
+      list.appendChild(row);
+
+      if (idx === 0 && label && colorBox) {
+        label.textContent = text;
+        colorBox.style.background = item.color;
+      }
+    });
+  }
+
+  function renderMaintenance() {
+    const list = document.getElementById('maintenance-list');
+    if (!list) return;
+    list.innerHTML = '';
+    maintenanceCats.forEach((item, index) => {
+      list.innerHTML += `<div class="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl">
+        <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-200">${item.icon}</span>
+        <span class="flex-1 text-sm font-semibold text-slate-700">${item.name}</span>
+        <button onclick="deleteItem('maint', ${index})" class="w-7 h-7 rounded-lg text-red-500 border-none bg-transparent cursor-pointer"></button>
+      </div>`;
+    });
+  }
+
+  window.deleteItem = async function(type, index) {
+    if (!confirm('Confirm delete?')) return;
+    if (type === 'room') {
+      const item = roomTypes[index];
+      if (item && item.id) await apiRequest('delete_room_type', { id: item.id });
+    } else {
+      const item = maintenanceCats[index];
+      if (item) await apiRequest('delete_maintenance_category', item.id ? { id: item.id } : { name: item.name });
+    }
+    await syncFromDb();
+  };
+
+  document.getElementById('room-type-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('room-type-name')?.value.trim();
+    const color = document.getElementById('room-type-color')?.value || '#3b82f6';
+    if (!name) return;
+    const code = name.toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'custom';
+    await apiRequest('add_room_type', { id: `type-${code}`, name, color });
+    document.getElementById('room-type-name').value = '';
+    await syncFromDb();
+  });
+
+  document.getElementById('maintenance-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('maintenance-name')?.value.trim();
+    const icon = document.getElementById('selected-icon')?.value || '';
+    if (!name) return;
+    await apiRequest('add_maintenance_category', { name, icon });
+    document.getElementById('maintenance-name').value = '';
+    await syncFromDb();
+  });
+
+  document.querySelectorAll('.icon-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.icon-btn').forEach(b => {
+        b.className = 'icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50 cursor-pointer text-xl transition-all';
+      });
+      btn.className = 'icon-btn w-10 h-10 rounded-xl flex items-center justify-center border-2 border-purple-500 bg-purple-100 shadow-md scale-110 cursor-pointer text-xl transition-all';
+      const input = document.getElementById('selected-icon');
+      if (input) input.value = btn.dataset.icon || '';
+    });
+  });
+
+  document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.settings-tab-btn').forEach(b => {
+        b.className = "settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-transparent text-slate-500 hover:bg-white/60 hover:text-slate-700";
+      });
+      this.className = "settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-white text-slate-800 shadow-sm border-r-2 border-r-blue-500";
+      document.querySelectorAll('.settings-tab-content').forEach(c => {
+        c.classList.add('hidden');
+        c.classList.remove('block');
+      });
+      const target = document.getElementById(this.dataset.target || '');
+      if (target) {
+        target.classList.remove('hidden');
+        target.classList.add('block');
+      }
+    });
+  });
+
+  const selectBtn = document.getElementById('roomTypeSelectBtn');
+  const selectList = document.getElementById('roomTypeSelectList');
+  if (selectBtn && selectList) {
+    selectBtn.addEventListener('click', () => selectList.classList.toggle('hidden'));
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('roomTypeSelect')?.contains(e.target)) {
+        selectList.classList.add('hidden');
+      }
+    });
+  }
+
+  window.updateRoomTypeDisplay = function(value) {
+    const list = document.getElementById('roomTypeSelectList');
+    const label = document.getElementById('roomTypeSelectLabel');
+    const colorBox = document.getElementById('roomTypeSelectColor');
+    const select = document.getElementById('editRoomType');
+    if (!list || !label || !colorBox || !select) return;
+    select.value = value;
+    const target = Array.from(list.children).find(btn => btn.dataset?.value === value);
+    if (!target) return;
+    const text = target.querySelector('.room-type-select__text')?.textContent || value;
+    const color = target.querySelector('.room-type-select__color')?.style.background || '#cbd5e1';
+    label.textContent = text;
+    colorBox.style.background = color;
+  };
+
+  const adminBtn = document.getElementById('admin-btn-canva');
+  const adminModal = document.getElementById('admin-modal-canva');
+  const closeModal = document.getElementById('close-modal-canva');
+  const backdrop = document.getElementById('modal-backdrop-canva');
+  adminBtn && adminBtn.addEventListener('click', async () => {
+    if (localStorage.getItem('isAdmin') !== 'true') { alert(' Staff only'); return; }
+    await syncFromDb();
+    adminModal.classList.remove('hidden');
+  });
+  const hideModal = () => adminModal.classList.add('hidden');
+  closeModal && closeModal.addEventListener('click', hideModal);
+  backdrop && backdrop.addEventListener('click', hideModal);
+
+  if (typeof window.ensureRoomTypeIds === 'function') window.ensureRoomTypeIds();
+  syncFromDb();
+});
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="js/datepicker.js"></script>
+<script charset="UTF-8" src="js/datepicker.js?v=20260226c"></script>
 <script>
     (function(){
         try {
@@ -422,7 +899,13 @@ function toggleAPDate() {
     })();
 </script>
 
-<script src="js/app.js?v=20260225i"></script>
+<script charset="UTF-8" src="js/app.js?v=20260226t"></script>
 
 </body>
 </html>
+
+
+
+
+
+

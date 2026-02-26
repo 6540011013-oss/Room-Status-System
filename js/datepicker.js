@@ -1,4 +1,4 @@
-class DatePicker {
+﻿class DatePicker {
   constructor(opts = {}) {
     this.opts = opts;
     this.container = null;
@@ -14,9 +14,9 @@ class DatePicker {
       <div class="absolute inset-0 bg-black/40" data-role="backdrop"></div>
       <div class="relative w-full max-w-md p-6">
         <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white font-semibold text-center">📅 เลือกวันที่ (30 วัน)</div>
+          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white font-semibold text-center">📅 เลือกวันที่ (ไม่จำกัดย้อนหลัง)</div>
           <div class="p-6">
-            <p class="text-xs text-gray-500 text-center mb-4">✓ เลือกได้วันนี้และย้อนหลัง 30 วัน</p>
+            <p class="text-xs text-gray-500 text-center mb-4">เลือกได้วันนี้และย้อนหลังได้ทั้งหมด</p>
             <div id="dp-selected-display" class="bg-gray-50 rounded-2xl p-5 text-center border-2 border-dashed border-gray-200 transition-all duration-300 mb-4">
               <p id="dp-placeholder" class="text-gray-400 text-lg">กรุณาเลือกวันที่</p>
               <p id="dp-selected" class="text-2xl font-semibold text-indigo-600 hidden"></p>
@@ -42,12 +42,17 @@ class DatePicker {
         </div>
       </div>`;
 
-    // attach events
     wrap.querySelector('[data-role="backdrop"]').addEventListener('click', () => this.close());
     wrap.querySelector('[data-role="toggle"]').addEventListener('click', () => this.close());
     wrap.querySelector('[data-role="goto-today"]').addEventListener('click', () => { this._selectDate(new Date()); });
-    wrap.querySelector('[data-role="prev"]').addEventListener('click', () => { this.currentMonth.setMonth(this.currentMonth.getMonth() - 1); this.renderCalendar(); });
-    wrap.querySelector('[data-role="next"]').addEventListener('click', () => { this.currentMonth.setMonth(this.currentMonth.getMonth() + 1); this.renderCalendar(); });
+    wrap.querySelector('[data-role="prev"]').addEventListener('click', () => {
+      this.currentMonth.setMonth(this.currentMonth.getMonth() - 1);
+      this.renderCalendar();
+    });
+    wrap.querySelector('[data-role="next"]').addEventListener('click', () => {
+      this.currentMonth.setMonth(this.currentMonth.getMonth() + 1);
+      this.renderCalendar();
+    });
 
     this.container = wrap;
     document.body.appendChild(this.container);
@@ -55,8 +60,8 @@ class DatePicker {
   }
 
   _formatThaiDate(date) {
-    const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-    const thaiDays = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+    const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const day = date.getDate();
     const month = thaiMonths[date.getMonth()];
     const year = date.getFullYear() + 543;
@@ -65,10 +70,11 @@ class DatePicker {
   }
 
   isInRange(date) {
-    const t = new Date(); t.setHours(0,0,0,0);
-    const start = new Date(t); start.setDate(start.getDate() - 30);
-    date = new Date(date); date.setHours(0,0,0,0);
-    return date >= start && date <= t;
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    date = new Date(date);
+    date.setHours(0, 0, 0, 0);
+    return date <= t;
   }
 
   renderCalendar() {
@@ -79,14 +85,14 @@ class DatePicker {
 
     const year = this.currentMonth.getFullYear();
     const month = this.currentMonth.getMonth();
-    monthTitle.textContent = `${['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][month]} ${year + 543}`;
+    const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    monthTitle.textContent = `${thaiMonths[month]} ${year + 543}`;
 
     daysEl.innerHTML = '';
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrev = new Date(year, month, 0).getDate();
 
-    // previous month fillers
     for (let i = firstDay - 1; i >= 0; i--) {
       const d = daysInPrev - i;
       const div = document.createElement('div');
@@ -95,13 +101,15 @@ class DatePicker {
       daysEl.appendChild(div);
     }
 
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d);
       const el = document.createElement('div');
       el.className = 'aspect-square flex items-center justify-center text-sm rounded-xl cursor-pointer transition-colors';
       const disabled = !this.isInRange(date);
+
       if (disabled) {
         el.classList.add('text-gray-300');
       } else if (this.selectedDate && date.getTime() === this.selectedDate.getTime()) {
@@ -111,12 +119,14 @@ class DatePicker {
       } else {
         el.classList.add('text-gray-700', 'hover:bg-indigo-50', 'hover:text-indigo-600');
       }
+
       el.textContent = d;
-      if (!disabled) el.addEventListener('click', () => this._selectDate(date));
+      if (!disabled) {
+        el.addEventListener('click', () => this._selectDate(date));
+      }
       daysEl.appendChild(el);
     }
 
-    // next month fillers to complete row
     const totalCells = firstDay + daysInMonth;
     const rem = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
     for (let i = 1; i <= rem; i++) {
@@ -126,7 +136,6 @@ class DatePicker {
       daysEl.appendChild(div);
     }
 
-    // update selected display
     if (this.selectedDate) {
       placeholder.classList.add('hidden');
       selectedEl.classList.remove('hidden');
@@ -138,19 +147,32 @@ class DatePicker {
   }
 
   _selectDate(date) {
-    const iso = new Date(date.getTime()); iso.setHours(0,0,0,0);
+    const iso = new Date(date.getTime());
+    iso.setHours(0, 0, 0, 0);
     this.selectedDate = iso;
-    const detail = { date: iso.toISOString(), formatted: this._formatThaiDate(iso) };
+
+    const detail = {
+      date: iso.toISOString(),
+      formatted: this._formatThaiDate(iso)
+    };
     document.dispatchEvent(new CustomEvent('date-selected', { detail }));
+
     this.renderCalendar();
-    // close shortly to mimic original behavior
     setTimeout(() => this.close(), 220);
   }
 
-  open() { this.container.classList.remove('hidden'); this.renderCalendar(); }
-  close() { this.container.classList.add('hidden'); }
+  open() {
+    this.container.classList.remove('hidden');
+    this.renderCalendar();
+  }
 
-  attachTo(element) { element.addEventListener('click', () => this.open()); }
+  close() {
+    this.container.classList.add('hidden');
+  }
+
+  attachTo(element) {
+    element.addEventListener('click', () => this.open());
+  }
 }
 
 window.DatePicker = DatePicker;

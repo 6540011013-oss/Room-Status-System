@@ -223,6 +223,74 @@
         height: 68px;
       }
     }
+
+    /* ================= QUICK GUIDE (RIGHT FLOAT BUTTON) ================= */
+    .guide-fab {
+      position: fixed;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1200;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 12px;
+      color: #fff;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28);
+      cursor: pointer;
+    }
+    .guide-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1300;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .guide-modal.hidden { display: none; }
+    .guide-panel {
+      width: min(640px, 100%);
+      max-height: 88vh;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 55px rgba(2, 6, 23, 0.3);
+      padding: 20px;
+    }
+    .guide-step {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 10px 0;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+    .guide-step:last-child { border-bottom: none; }
+    .guide-step-no {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4338ca;
+      font-weight: 800;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (max-width: 768px) {
+      .guide-fab {
+        right: 12px;
+        top: auto;
+        bottom: 16px;
+        transform: none;
+      }
+    }
   </style>
 </head>
 
@@ -310,6 +378,26 @@
 <footer class="py-6 text-center text-sm text-slate-500 border-t">
   © Andaman Beach Suites Hotel
 </footer>
+
+<button id="guideFab" class="guide-fab" type="button">วิธีใช้งาน</button>
+
+<div id="guideModal" class="guide-modal hidden">
+  <div class="guide-panel" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+    <div class="flex items-center justify-between mb-2">
+      <h3 id="guideTitle" class="text-xl font-extrabold text-slate-800">ขั้นตอนการใช้งานระบบ</h3>
+      <button id="guideClose" class="h-9 w-9 rounded-full border-none bg-slate-100 hover:bg-slate-200 cursor-pointer text-slate-700 text-lg">×</button>
+    </div>
+    <p class="text-sm text-slate-500 mb-3">คู่มือย่อสำหรับหน้า Room Status System</p>
+
+    <div class="guide-step"><div class="guide-step-no">1</div><div><div class="font-bold text-slate-800">เลือกตึกที่จะจัดการ</div><div class="text-sm text-slate-600">กด View Floor Plan ของ Building A หรือ Building B</div></div></div>
+    <div class="guide-step"><div class="guide-step-no">2</div><div><div class="font-bold text-slate-800">เข้าสู่โหมดพนักงาน</div><div class="text-sm text-slate-600">กด STAFF LOGIN และใส่รหัสเพื่อเปิดสิทธิ์แก้ไข</div></div></div>
+    <div class="guide-step"><div class="guide-step-no">3</div><div><div class="font-bold text-slate-800">แก้ไขข้อมูลห้อง</div><div class="text-sm text-slate-600">คลิกห้องเพื่อใส่ชื่อแขก ประเภทห้อง งานซ่อม AP และโน้ต</div></div></div>
+    <div class="guide-step"><div class="guide-step-no">4</div><div><div class="font-bold text-slate-800">อัปเดตรายการของในห้อง</div><div class="text-sm text-slate-600">เปิด Room Info แล้วเพิ่มรูปหรือรายละเอียดอุปกรณ์แต่ละห้อง</div></div></div>
+    <div class="guide-step"><div class="guide-step-no">5</div><div><div class="font-bold text-slate-800">ใช้เมนู SETTINGS</div><div class="text-sm text-slate-600">จัดการ Room Type และ Maintenance Category ให้ตรงงานจริง</div></div></div>
+    <div class="guide-step"><div class="guide-step-no">6</div><div><div class="font-bold text-slate-800">ดู Dashboard และกราฟ</div><div class="text-sm text-slate-600">เช็กงานค้าง งานเสร็จ และสรุปประเภทห้องเพื่อรายงาน</div></div></div>
+    <div class="guide-step"><div class="guide-step-no">7</div><div><div class="font-bold text-slate-800">พิมพ์รายงานเมื่อพร้อม</div><div class="text-sm text-slate-600">เข้า Dashboard แล้วกดปุ่มพิมพ์เพื่อออกรายงาน</div></div></div>
+  </div>
+</div>
 
 <div id="adminModal" class="modal-overlay hidden">
   <div class="modal-box">
@@ -442,6 +530,22 @@
   window.addEventListener("storage", (e) => {
       if (e.key === "isAdmin") checkLoginStatus();
   });
+
+  // --- 4. Quick Guide Button (Right Side) ---
+  const guideFab = document.getElementById("guideFab");
+  const guideModal = document.getElementById("guideModal");
+  const guideClose = document.getElementById("guideClose");
+
+  if (guideFab && guideModal) {
+    guideFab.addEventListener("click", () => guideModal.classList.remove("hidden"));
+    if (guideClose) guideClose.addEventListener("click", () => guideModal.classList.add("hidden"));
+    guideModal.addEventListener("click", (e) => {
+      if (e.target === guideModal) guideModal.classList.add("hidden");
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") guideModal.classList.add("hidden");
+    });
+  }
 
   checkLoginStatus();
 

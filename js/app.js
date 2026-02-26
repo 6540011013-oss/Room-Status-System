@@ -8,12 +8,34 @@ let currentViewingRoom = null;
 let activeFilters = new Set(); 
 let currentCategoryFilter = 'all';
 let currentImageData = '';
-let occupancyChart = null;
+let imageViewerLastActive = null;
 let maintenanceChart = null;
-const BUILDING_ID = 'A';
+const BUILDING_ID = String(document.body?.dataset?.buildingId || 'A').trim().toUpperCase();
 const API_URL = 'api.php';
-const DATE_STORAGE_KEY = 'room_snapshot_date_a_v1';
-const MAINT_TASK_LOG_KEY = 'maint_task_log_a';
+const DATE_STORAGE_KEY = `room_snapshot_date_${BUILDING_ID.toLowerCase()}_v1`;
+let maintTaskLogCache = [];
+
+async function loadMaintenanceTasksFromDb() {
+    const res = await apiRequest('get_maintenance_tasks', { building: BUILDING_ID });
+    if (res && Array.isArray(res.tasks)) {
+        maintTaskLogCache = res.tasks.map(task => ({
+            ...task,
+            id: task?.id ?? null,
+            roomId: String(task?.roomId ?? task?.room_id ?? '').trim(),
+            type: String(task?.type ?? '').trim(),
+            note: String(task?.note ?? '').trim(),
+            reportedDate: String(task?.reportedDate ?? task?.reported_date ?? '').trim(),
+            resolvedDate: String(task?.resolvedDate ?? task?.resolved_date ?? '').trim(),
+            status: String(task?.status ?? 'pending').trim()
+        }));
+    } else {
+        maintTaskLogCache = [];
+    }
+    if (typeof renderResolvedThumbs === 'function') {
+        renderResolvedThumbs();
+    }
+    return maintTaskLogCache;
+}
 
 async function apiRequest(action, payload = {}) {
     try {
@@ -53,6 +75,11 @@ function getTodayLocal() {
 }
 
 let selectedSnapshotDate = localStorage.getItem(DATE_STORAGE_KEY) || getTodayLocal();
+if (selectedSnapshotDate !== getTodayLocal()) {
+    // Default to today on new page load to avoid showing stale snapshots by accident.
+    selectedSnapshotDate = getTodayLocal();
+    localStorage.setItem(DATE_STORAGE_KEY, selectedSnapshotDate);
+}
 
 // สีห้อง (ดึงจาก SQL เท่านั้น)
 const ROOM_COLORS = {};
@@ -217,9 +244,11 @@ function getRoomTypeColor(typeId) {
 function getRoomElements() { return Array.from(document.querySelectorAll('.room:not(.two-line)')); }
 function getRoomNumber(el) { return el.innerText.split('\n')[0] || "0000"; }
 function getRoomId(roomElement) { return (roomElement.getAttribute('data-room-id') || getRoomNumber(roomElement)).trim(); }
+function getRoomImage(roomElement) { return String(roomElement?.getAttribute('data-room-image') || '').trim(); }
 
 // --- STORAGE (Items in Room) ---
 let roomInfoMapCache = {};
+const roomItemsSaveQueue = new Map();
 
 async function loadRoomInfoMapFromDb(date) {
     const res = await apiRequest('get_room_items_snapshot', { building: BUILDING_ID, snapshot_date: date });
@@ -243,12 +272,31 @@ function loadRoomInfoMap() {
 
 async function saveRoomInfoMapForRoom(roomId) {
     const items = roomInfoMapCache[roomId] || [];
-    await apiRequest('save_room_items_snapshot', {
+    const res = await apiRequest('save_room_items_snapshot', {
         building: BUILDING_ID,
         room_id: roomId,
         snapshot_date: selectedSnapshotDate,
         items_json: JSON.stringify(items)
     });
+    return !!(res && res.ok === true);
+}
+
+function queueSaveRoomInfoMapForRoom(roomId) {
+    const key = String(roomId || '').trim();
+    if (!key) return Promise.resolve(false);
+
+    const prev = roomItemsSaveQueue.get(key) || Promise.resolve(true);
+    const next = prev
+        .catch(() => false)
+        .then(() => saveRoomInfoMapForRoom(key));
+
+    roomItemsSaveQueue.set(key, next);
+    next.finally(() => {
+        if (roomItemsSaveQueue.get(key) === next) {
+            roomItemsSaveQueue.delete(key);
+        }
+    });
+    return next;
 }
 
 const ROOM_STATE_KEY = 'room_state_a_v1';
@@ -287,7 +335,8 @@ async function saveRoomStateToDb(roomId, data) {
         maint_note: data.maintNote || '',
         ap_installed: data.apChecked ? 1 : 0,
         ap_install_date: data.apDate || '',
-        bed_badge: ''
+        bed_badge: '',
+        room_image: data.roomImage || data.room_image || ''
     });
 }
 
@@ -303,7 +352,8 @@ async function saveRoomSnapshotToDb(roomId, data) {
         maint_note: data.maintNote || '',
         ap_installed: data.apChecked ? 1 : 0,
         ap_install_date: data.apDate || '',
-        bed_badge: ''
+        bed_badge: '',
+        room_image: data.roomImage || data.room_image || ''
     });
 }
 
@@ -317,6 +367,7 @@ function renderRoomInfoList(roomId) {
 
     const map = loadRoomInfoMap();
     let items = map[roomId] || [];
+    const roomDefaultImage = currentViewingRoom ? getRoomImage(currentViewingRoom) : '';
 
     // Update count (all items)
     if(countBadge) countBadge.innerText = items.length;
@@ -358,20 +409,21 @@ function renderRoomInfoList(roomId) {
         
         // รูปภาพ
         let imgHtml = '';
-        if (item.image && item.image.trim() !== "") {
-            imgHtml = `<img src="${item.image}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+        const itemImage = (item.image && item.image.trim() !== '') ? item.image : roomDefaultImage;
+        if (itemImage && itemImage.trim() !== "") {
+            imgHtml = `<img src="${itemImage}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                        <div class="hidden absolute inset-0 items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
         } else {
             imgHtml = `<div class="absolute inset-0 flex items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
         }
 
         card.innerHTML = `
-            <div class="relative h-36 bg-gradient-to-br from-slate-100 to-slate-200">
+            <button type="button" class="item-preview-trigger relative h-36 w-full bg-gradient-to-br from-slate-100 to-slate-200 border-none p-0">
                 ${imgHtml}
                 <span class="category-badge absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm text-slate-700 shadow-sm">
                     ${icon} ${displayCategory}
                 </span>
-            </div>
+            </button>
             <div class="p-4">
                 <h3 class="font-bold text-slate-800 text-lg mb-1 truncate">${item.name}</h3>
                 <p class="text-slate-500 text-sm flex items-center gap-1.5 mb-4">
@@ -385,6 +437,19 @@ function renderRoomInfoList(roomId) {
                 </button>
             </div>
         `;
+        const previewBtn = card.querySelector('.item-preview-trigger');
+        if (previewBtn) {
+            if (itemImage && itemImage.trim() !== '') {
+                previewBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openImageViewer(itemImage, item.name || `Room ${roomId}`);
+                });
+            } else {
+                previewBtn.disabled = true;
+                previewBtn.classList.remove('item-preview-trigger');
+                previewBtn.style.cursor = 'default';
+            }
+        }
         listEl.appendChild(card);
     });
 }
@@ -509,7 +574,8 @@ window.saveRoomInfoNote = async function() {
         maint_note: String(currentViewingRoom.getAttribute('data-maint-note') || '').trim(),
         ap_installed: currentViewingRoom.getAttribute('data-ap') === 'true' ? 1 : 0,
         ap_install_date: String(currentViewingRoom.getAttribute('data-ap-date') || '').trim(),
-        bed_badge: ''
+        bed_badge: '',
+        room_image: getRoomImage(currentViewingRoom)
     };
 
     await apiRequest('save_room_state', payload);
@@ -526,6 +592,54 @@ window.closeInfoModal = function() {
     toggleRoomInfoNotePanel(false);
     document.getElementById('roomInfoModal').classList.add('hidden');
     currentViewingRoom = null;
+}
+
+window.openImageViewer = function(src, caption = '') {
+    const modal = el('imageViewerModal');
+    const img = el('imageViewerImg');
+    const captionEl = el('imageViewerCaption');
+    if (!modal || !img) return;
+    const imageSrc = String(src || '').trim();
+    if (!imageSrc) return;
+
+    imageViewerLastActive = document.activeElement;
+    img.src = imageSrc;
+    if (captionEl) captionEl.textContent = String(caption || '').trim();
+    modal.classList.remove('hidden');
+};
+
+window.closeImageViewer = function() {
+    const modal = el('imageViewerModal');
+    const img = el('imageViewerImg');
+    const captionEl = el('imageViewerCaption');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    if (img) img.src = '';
+    if (captionEl) captionEl.textContent = '';
+    if (imageViewerLastActive && typeof imageViewerLastActive.focus === 'function') {
+        imageViewerLastActive.focus();
+    }
+    imageViewerLastActive = null;
+};
+
+function initImageViewer() {
+    const modal = el('imageViewerModal');
+    if (!modal || modal.dataset.viewerReady === '1') return;
+
+    modal.addEventListener('click', (e) => {
+        if (e.target && e.target.closest('[data-image-viewer-close]')) {
+            closeImageViewer();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeImageViewer();
+        }
+    });
+
+    modal.dataset.viewerReady = '1';
 }
 
 window.openAddItemModal = function() {
@@ -545,7 +659,7 @@ window.openAddItemModal = function() {
     }
     currentImageData = '';
     const fileInput = el('item-image-file'); if (fileInput) fileInput.value = '';
-    if (typeof window.updateImagePreview === 'function') window.updateImagePreview('');
+    if (typeof window.updateImagePreview === 'function') window.updateImagePreview(currentImageData);
 }
 
 window.closeAddItemModal = function() {
@@ -601,7 +715,7 @@ function getMaintenanceCategories() {
         const list = JSON.parse(localStorage.getItem('maint_cats_final_v1')) || [];
         if (list.length) return list;
     } catch { }
-    return DEFAULT_MAINT_CATS;
+    return [];
 }
 
 function getMaintIconByName(maintName) {
@@ -611,11 +725,7 @@ function getMaintIconByName(maintName) {
 }
 
 function readMaintTaskLog() {
-    try {
-        return JSON.parse(localStorage.getItem(MAINT_TASK_LOG_KEY)) || [];
-    } catch {
-        return [];
-    }
+    return Array.isArray(maintTaskLogCache) ? maintTaskLogCache : [];
 }
 
 function getTaskStateOnDate(task, dateISO, todayISO) {
@@ -662,29 +772,28 @@ function getMaintenanceSnapshotStats() {
         resolvedRoomIds.add(roomId);
     });
 
-    // Safety net: if today's room has active maint but no log yet, count as pending.
-    if (selectedSnapshotDate === todayISO) {
-        getRoomElements().forEach(room => {
-            const type = String(room.getAttribute('data-maint') || '').trim();
-            const roomId = String(getRoomId(room) || '').trim();
-            if (!type || !roomId) return;
-
-            const hasPendingInLog = log.some(task =>
-                String(task?.roomId || '').trim() === roomId &&
-                String(task?.type || '').trim() === type &&
-                getTaskStateOnDate(task, selectedSnapshotDate, todayISO) === 'pending'
-            );
-            if (!hasPendingInLog) {
-                pendingByType.set(type, (pendingByType.get(type) || 0) + 1);
-            }
-        });
-    }
-
     return { pendingByType, resolvedByType, resolvedRoomIds };
 }
 
+function getLatestResolvedRoomIds() {
+    const log = readMaintTaskLog();
+    const latestByRoom = new Map();
+
+    log.forEach(task => {
+        const roomId = String(task?.roomId || '').trim();
+        if (!roomId || latestByRoom.has(roomId)) return;
+        latestByRoom.set(roomId, String(task?.status || '').trim().toLowerCase() === 'resolved');
+    });
+
+    const resolvedRoomIds = new Set();
+    latestByRoom.forEach((isResolved, roomId) => {
+        if (isResolved) resolvedRoomIds.add(roomId);
+    });
+    return resolvedRoomIds;
+}
+
 function renderResolvedThumbs() {
-    const { resolvedRoomIds } = getMaintenanceSnapshotStats();
+    const resolvedRoomIds = getLatestResolvedRoomIds();
     const rooms = getRoomElements();
     rooms.forEach(room => {
         room.querySelectorAll('.resolved-thumb').forEach(el => el.remove());
@@ -701,53 +810,25 @@ window.resolveMaintTaskFromDashboard = function(taskId) {
         return;
     }
 
-    let maintLog = [];
-    try {
-        maintLog = JSON.parse(localStorage.getItem(MAINT_TASK_LOG_KEY)) || [];
-    } catch {
-        maintLog = [];
-    }
-
-    const idx = maintLog.findIndex(t => String(t?.id || '') === String(taskId));
-    if (idx < 0) return;
-    if (maintLog[idx].status !== 'pending') return;
-
     if (!confirm('Mark this maintenance task as resolved?')) return;
 
-    const todayISO = getTodayLocal();
-    const task = maintLog[idx];
-    maintLog[idx].status = 'resolved';
-    maintLog[idx].resolvedDate = todayISO;
-    localStorage.setItem(MAINT_TASK_LOG_KEY, JSON.stringify(maintLog));
+    (async () => {
+        const res = await apiRequest('resolve_maintenance_task', {
+            building: BUILDING_ID,
+            task_id: taskId
+        });
+        if (!res) return;
 
-    const targetRoom = getDashboardRooms().find(r => String(getRoomId(r)).trim() === String(task.roomId).trim());
-    if (targetRoom) {
-        targetRoom.setAttribute('data-maint', '');
-        targetRoom.setAttribute('data-maint-note', '');
-        targetRoom.querySelectorAll('.maint-icon').forEach(el => el.remove());
-
-        const state = {
-            name: (targetRoom.getAttribute('data-name') || getGuestNameFromRoom(targetRoom) || '').trim(),
-            typeClass: getRoomTypeIdForRoom(targetRoom),
-            maintStatus: '',
-            maintNote: '',
-            apChecked: targetRoom.getAttribute('data-ap') === 'true',
-            apDate: targetRoom.getAttribute('data-ap-date') || ''
-        };
-        persistRoomState(targetRoom, state);
-    }
-
-    if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
-    if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+        await applyRoomStatesFromDb();
+        await loadMaintenanceTasksFromDb();
+        if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
+        if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+    })();
 };
 
 window.updateDashboardCharts = function() {
     const rooms = getDashboardRooms();
-    const totalRooms = rooms.length;
-
-    // นับจำนวนแขกเข้าพัก (Occupied/Vacant เผื่อใช้กราฟ)
-    const occupied = rooms.filter(r => getGuestNameFromRoom(r)).length;
-    const vacant = Math.max(0, totalRooms - occupied);
+    const maintStats = getMaintenanceSnapshotStats();
 
     // 1. นับจำนวน AP
     const apInstalled = rooms.filter(r => r.getAttribute('data-ap') === 'true').length;
@@ -784,8 +865,7 @@ window.updateDashboardCharts = function() {
         const colors = ['#f59e0b', '#ec4899', '#8b5cf6', '#10b981', '#ef4444', '#14b8a6', '#f97316'];
 
         maintCategories.forEach((cat, index) => {
-            // นับว่ามีห้องไหนติดสถานะนี้อยู่บ้าง
-            const count = rooms.filter(r => (r.getAttribute('data-maint') || '').trim() === cat.name).length;
+            const count = maintStats.pendingByType.get(cat.name) || 0;
             
             // เลือกสีตาม Index
             const color = colors[index % colors.length];
@@ -804,55 +884,33 @@ window.updateDashboardCharts = function() {
     }
 
     // ==========================================
-    // ส่วนกราฟที่เหลือ ทำงานเหมือนเดิม
+    // Maintenance Compare Chart (Pending vs Resolved)
     // ==========================================
     if (typeof Chart === 'undefined') return;
-    
 
-    const occupancyCanvas = document.getElementById('occupancyChart');
-    if (occupancyCanvas) {
-        if (occupancyChart) occupancyChart.destroy();
-        occupancyChart = new Chart(occupancyCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: ['Occupied', 'Vacant'],
-                datasets: [{
-                    data: [occupied, vacant],
-                    backgroundColor: ['#7c3aed', '#e2e8f0'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-
-    const maintCanvas = document.getElementById('maintenanceChart');
+    const maintCanvas = document.getElementById('maintenanceCompareChart');
     if (maintCanvas) {
         const cats = getMaintenanceCategories();
         const countMap = new Map();
-        cats.forEach(c => countMap.set(c.name, { count: 0, icon: c.icon }));
-
-        rooms.forEach(r => {
-            const maint = (r.getAttribute('data-maint') || '').trim();
-            if (!maint) return;
-            if (!countMap.has(maint)) countMap.set(maint, { count: 0, icon: '🔧' });
+        cats.forEach(c => countMap.set(c.name, { pending: 0, resolved: 0, icon: c.icon }));
+        maintStats.pendingByType.forEach((count, maint) => {
+            if (!countMap.has(maint)) countMap.set(maint, { pending: 0, resolved: 0, icon: '🔧' });
             const entry = countMap.get(maint);
-            entry.count += 1;
+            entry.pending = count;
+        });
+        maintStats.resolvedByType.forEach((count, maint) => {
+            if (!countMap.has(maint)) countMap.set(maint, { pending: 0, resolved: 0, icon: '🔧' });
+            const entry = countMap.get(maint);
+            entry.resolved = count;
         });
 
         const labels = [];
-        const data = [];
-        const colors = [];
+        const pendingData = [];
+        const resolvedData = [];
         Array.from(countMap.entries()).forEach(([name, meta]) => {
             labels.push(`${meta.icon} ${name}`);
-            data.push(meta.count);
-            colors.push(getMaintColorByIcon(meta.icon));
+            pendingData.push(meta.pending || 0);
+            resolvedData.push(meta.resolved || 0);
         });
 
         if (maintenanceChart) maintenanceChart.destroy();
@@ -861,9 +919,14 @@ window.updateDashboardCharts = function() {
             data: {
                 labels,
                 datasets: [{
-                    label: 'Rooms',
-                    data,
-                    backgroundColor: colors,
+                    label: 'Pending',
+                    data: pendingData,
+                    backgroundColor: '#f59e0b',
+                    borderRadius: 8
+                }, {
+                    label: 'Resolved',
+                    data: resolvedData,
+                    backgroundColor: '#10b981',
                     borderRadius: 8
                 }]
             },
@@ -871,11 +934,11 @@ window.updateDashboardCharts = function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grace: '5%' },
                     x: { ticks: { autoSkip: false } }
                 },
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: true, position: 'bottom' }
                 }
             }
         });
@@ -932,52 +995,12 @@ window.updateDashboardCharts = function() {
         const todayISO = getTodayLocal();
         maintTableBody.innerHTML = '';
         let taskCount = 0;
-        let maintLog = [];
-        try {
-            maintLog = JSON.parse(localStorage.getItem(MAINT_TASK_LOG_KEY)) || [];
-        } catch {
-            maintLog = [];
-        }
-
-        // Bootstrap 1 ครั้ง: ถ้าวันนี้ log ว่าง แต่มีห้องที่กำลังแจ้งซ่อมอยู่ ให้สร้าง pending เข้า log
-        if (selectedSnapshotDate === todayISO) {
-            const existingPendingRooms = new Set(
-                maintLog
-                    .filter(t => t && t.status === 'pending')
-                    .map(t => String(t.roomId || '').trim())
-            );
-
-            let changed = false;
-            rooms.forEach(room => {
-                const roomId = String(getRoomId(room) || '').trim();
-                const maintStatus = String(room.getAttribute('data-maint') || '').trim();
-                if (!roomId || !maintStatus) return;
-                if (existingPendingRooms.has(roomId)) return;
-
-                const maintNote = String(room.getAttribute('data-maint-note') || '').trim();
-                maintLog.push({
-                    id: `mt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                    roomId,
-                    type: maintStatus,
-                    note: maintNote,
-                    reportedDate: todayISO,
-                    resolvedDate: '',
-                    status: 'pending'
-                });
-                existingPendingRooms.add(roomId);
-                changed = true;
-            });
-
-            if (changed) {
-                localStorage.setItem(MAINT_TASK_LOG_KEY, JSON.stringify(maintLog));
-            }
-        }
-
-        maintLog.sort((a, b) => String(b.reportedDate || '').localeCompare(String(a.reportedDate || '')));
+        const maintLog = [...readMaintTaskLog()];
+        maintLog.sort((a, b) => String(b.reported_date || b.reportedDate || '').localeCompare(String(a.reported_date || a.reportedDate || '')));
 
         maintLog.forEach(task => {
-            const reportedDate = task.reportedDate || '';
-            const resolvedDate = task.resolvedDate || '';
+            const reportedDate = task.reported_date || task.reportedDate || '';
+            const resolvedDate = task.resolved_date || task.resolvedDate || '';
             const status = task.status || 'pending';
 
             // Rule 1: selectedSnapshotDate < reportedDate -> hide
@@ -1118,7 +1141,7 @@ function initImagePicker() {
 }
 
 // 🔥 บันทึกข้อมูล (ทำงานกับ HTML ใหม่แน่นอน)
-window.saveCanvaItem = function() {
+window.saveCanvaItem = async function() {
     if (!currentViewingRoom) return;
     if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
 
@@ -1152,7 +1175,32 @@ window.saveCanvaItem = function() {
     // 3. บันทึกข้อมูลที่มีหน่วยติดไปด้วยลงใน Database/Storage
     map[roomId].push({ name, width, height, note, image, category });
     roomInfoMapCache = map;
-    saveRoomInfoMapForRoom(roomId);
+    const saved = await queueSaveRoomInfoMapForRoom(roomId);
+    if (!saved) {
+        alert("Cannot save item list. Please try again.");
+        return;
+    }
+    if (currentViewingRoom && image) {
+        currentViewingRoom.setAttribute('data-room-image', image);
+    }
+
+    if (currentViewingRoom) {
+        const payload = {
+            building: BUILDING_ID,
+            room_id: roomId,
+            guest_name: getGuestNameFromRoom(currentViewingRoom),
+            room_type: getRoomTypeIdForRoom(currentViewingRoom),
+            room_note: String(currentViewingRoom.getAttribute('data-room-note') || '').trim(),
+            maint_status: String(currentViewingRoom.getAttribute('data-maint') || '').trim(),
+            maint_note: String(currentViewingRoom.getAttribute('data-maint-note') || '').trim(),
+            ap_installed: currentViewingRoom.getAttribute('data-ap') === 'true' ? 1 : 0,
+            ap_install_date: String(currentViewingRoom.getAttribute('data-ap-date') || '').trim(),
+            bed_badge: '',
+            room_image: image
+        };
+        apiRequest('save_room_state', payload);
+        apiRequest('save_room_snapshot', { ...payload, snapshot_date: getTodayLocal() });
+    }
 
     closeAddItemModal();
     renderRoomInfoList(roomId);
@@ -1165,8 +1213,13 @@ window.deleteInfoItem = function(roomId, index) {
     if (map[roomId]) {
         map[roomId].splice(index, 1);
         roomInfoMapCache = map;
-        saveRoomInfoMapForRoom(roomId);
-        renderRoomInfoList(roomId);
+        queueSaveRoomInfoMapForRoom(roomId).then((saved) => {
+            if (!saved) {
+                alert("Cannot save item list after delete. Please try again.");
+                return;
+            }
+            renderRoomInfoList(roomId);
+        });
     }
 };
 
@@ -1215,8 +1268,13 @@ function renderServiceSidebar() {
 
     const list = panel.querySelector('.service-v2-list');
     const tones = ['blue', 'amber', 'violet'];
+    const visibleCategories = categories.filter(cat => {
+        const p = stats.pendingByType.get(cat.name) || 0;
+        const r = stats.resolvedByType.get(cat.name) || 0;
+        return (p + r) > 0;
+    });
 
-    categories.forEach((cat, index) => {
+    visibleCategories.forEach((cat, index) => {
         const pendingCount = stats.pendingByType.get(cat.name) || 0;
         const resolvedCount = stats.resolvedByType.get(cat.name) || 0;
         const totalByType = pendingCount + resolvedCount;
@@ -1246,6 +1304,10 @@ function renderServiceSidebar() {
         list.appendChild(item);
     });
 
+    if (!visibleCategories.length) {
+        list.innerHTML = `<div class="service-v2-item tone-slate" style="cursor:default;"><div class="service-v2-item-meta" style="margin-top:0;"><span>ไม่มีงานซ่อมในวันที่เลือก</span><span>0%</span></div></div>`;
+    }
+
     sidebarContainer.appendChild(panel);
 
     renderResolvedThumbs();
@@ -1272,9 +1334,9 @@ function applyActiveFiltersToRooms() {
     const iconMap = new Map(categories.map(c => [c.name.trim(), c.icon]));
 
     allRooms.forEach(room => {
-        // remove only filter-related markers/icons, keep any existing classes/background-color
+        // remove only filter-related markers/icons, keep persisted maint-icon from DB
         room.querySelectorAll('.filter-icon').forEach(el => el.remove());
-        room.querySelectorAll('.maint-icon').forEach(el => el.remove());
+        room.querySelectorAll('.maint-icon.filter-maint-icon').forEach(el => el.remove());
     });
 
     if (activeFilters.size === 0) {
@@ -1296,7 +1358,7 @@ function applyActiveFiltersToRooms() {
             room.insertAdjacentHTML('beforeend', `<span class="filter-icon" aria-hidden="true">${icon}</span>`);
             const note = (room.getAttribute('data-maint-note') || '').trim();
             const label = note ? `Task: ${note}` : 'Task: Unspecified';
-            room.insertAdjacentHTML('beforeend', `<div class="maint-icon" data-info="${label}">${icon}</div>`);
+            room.insertAdjacentHTML('beforeend', `<div class="maint-icon filter-maint-icon" data-info="${label}">${icon}</div>`);
         }
     });
 }
@@ -1372,6 +1434,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const editModeBtn = document.getElementById('edit-mode-btn');
     const isAdminUser = () => localStorage.getItem("isAdmin") === "true";
     initImagePicker();
+    initImageViewer();
     clearRoomTypeColors();
 
 
@@ -1429,7 +1492,6 @@ getRoomElements().forEach(el => {
                     const span = activeBtn.querySelector('span');
                     iconText = span ? span.innerText : activeBtn.innerText.trim().charAt(0);
                 }
-
                 // สร้างไอคอนวงกลม แปะไว้มุมขวาบนของห้อง
                 const iconDiv = document.createElement('div');
                 iconDiv.className = 'quick-badge-icon absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-red-500 rounded-full flex items-center justify-center shadow-lg text-[11px] z-50';
@@ -1446,11 +1508,13 @@ getRoomElements().forEach(el => {
                 maint_status: newStatus,
                 maint_note: newStatus ? 'Quick Update' : '', 
                 ap_installed: el.getAttribute('data-ap') === 'true' ? 1 : 0,
-                ap_install_date: el.getAttribute('data-ap-date') || ''
+                ap_install_date: el.getAttribute('data-ap-date') || '',
+                room_image: getRoomImage(el)
             };
 
             try {
                 await apiRequest('save_room_state', payload);
+                await loadMaintenanceTasksFromDb();
                 // สั่งซิงค์เงียบๆ เผื่ออัปเดต Service Status แถบซ้ายมือ
                 if (typeof window.applyRoomStatesFromDb === 'function') window.applyRoomStatesFromDb();
                 if (typeof window.renderServiceSidebar === 'function') window.renderServiceSidebar();
@@ -1478,7 +1542,7 @@ getRoomElements().forEach(el => {
    // Save Edit Room
 const btnSave = document.getElementById('saveRoomInfo');
 if (btnSave) {
-    btnSave.onclick = function() {
+    btnSave.onclick = async function() {
         if (!currentEditingRoom) return;
         if (selectedSnapshotDate !== getTodayLocal()) { 
             alert("View only (past date)."); 
@@ -1538,62 +1602,6 @@ if (btnSave) {
 
         currentEditingRoom.innerHTML = contentHtml + badgesHtml;
 
-        // ==========================================
-        // Maintenance Task Log (30 days, localStorage only)
-        // ==========================================
-        const parseISODate = (iso) => {
-            if (!iso || typeof iso !== 'string') return null;
-            const [y, m, d] = iso.split('-').map(Number);
-            if (!y || !m || !d) return null;
-            return new Date(y, m - 1, d);
-        };
-
-        let maintLog = [];
-        try {
-            maintLog = JSON.parse(localStorage.getItem(MAINT_TASK_LOG_KEY)) || [];
-        } catch {
-            maintLog = [];
-        }
-
-        // Auto-clean: remove records older than 30 days from today
-        const todayISO = getTodayLocal();
-        const todayDate = parseISODate(todayISO);
-        const cutoffDate = new Date(todayDate);
-        cutoffDate.setDate(cutoffDate.getDate() - 30);
-
-        maintLog = maintLog.filter(task => {
-            const reported = parseISODate(task?.reportedDate);
-            return reported && reported >= cutoffDate;
-        });
-
-        const pendingIndex = maintLog.findIndex(task =>
-            String(task.roomId) === String(roomId) && task.status === 'pending'
-        );
-
-        if (maintStatus !== '') {
-            // Active maintenance: update existing pending task or create new one
-            if (pendingIndex >= 0) {
-                maintLog[pendingIndex].type = maintStatus;
-                maintLog[pendingIndex].note = maintNote;
-            } else {
-                maintLog.push({
-                    id: `mt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                    roomId,
-                    type: maintStatus,
-                    note: maintNote,
-                    reportedDate: todayISO,
-                    resolvedDate: '',
-                    status: 'pending'
-                });
-            }
-        } else if (pendingIndex >= 0) {
-            // Maintenance cleared: mark pending task as resolved
-            maintLog[pendingIndex].status = 'resolved';
-            maintLog[pendingIndex].resolvedDate = todayISO;
-        }
-
-        localStorage.setItem(MAINT_TASK_LOG_KEY, JSON.stringify(maintLog));
-
         // 🔥 SAVE TO DB
         const payload = {
             building: BUILDING_ID,
@@ -1605,17 +1613,19 @@ if (btnSave) {
             maint_note: maintNote,
             ap_installed: apChecked ? 1 : 0,
             ap_install_date: apDate,
-            bed_badge: ''
+            bed_badge: '',
+            room_image: getRoomImage(currentEditingRoom)
         };
 
         // 1. อัปเดตสถานะปัจจุบัน (ตาราง rooms_status)
-        apiRequest('save_room_state', payload);
+        await apiRequest('save_room_state', payload);
 
         // 2. บันทึกประวัติของวันนี้ (ตาราง room_status_history)
-        apiRequest('save_room_snapshot', {
+        await apiRequest('save_room_snapshot', {
             ...payload,
             snapshot_date: getTodayLocal() // ดึงวันที่ปัจจุบันส่งไปด้วย
         });
+        await loadMaintenanceTasksFromDb();
 
         closeModal();
         renderServiceSidebar();
@@ -1667,7 +1677,7 @@ if (btnSave) {
             return null;
         }
 
-  function applyRoomStates(map) {
+    function applyRoomStates(map) {
         if (!map || typeof map !== 'object') return;
 
         getRoomElements().forEach(room => {
@@ -1684,6 +1694,7 @@ if (btnSave) {
                 room.setAttribute('data-ap', 'false');
                 room.removeAttribute('data-ap-date');
                 room.removeAttribute('data-type');
+                room.removeAttribute('data-room-image');
                 room.style.setProperty('background-color', 'transparent', 'important');
                 
                 room.innerHTML = `
@@ -1703,6 +1714,7 @@ if (btnSave) {
             const maintNote = (state.maintNote ?? state.maint_note ?? '').trim();
             const apChecked = !!(state.apChecked ?? state.ap_installed);
             const apDate = state.apDate ?? state.ap_install_date ?? '';
+            const roomImage = (state.roomImage ?? state.room_image ?? '').trim();
 
             room.classList.remove(...ALL_COLOR_CLASSES);
             room.setAttribute('data-name', name);
@@ -1712,6 +1724,7 @@ if (btnSave) {
             room.setAttribute('data-ap', apChecked ? 'true' : 'false');
             room.setAttribute('data-ap-date', apDate);
             room.setAttribute('data-type', typeClass || '');
+            room.setAttribute('data-room-image', roomImage);
 
             let badgesHtml = '';
             if (apChecked) {
@@ -1742,6 +1755,10 @@ if (btnSave) {
                 applyHighlightEffect();
             }
         });
+        if (typeof window.applyRoomTypeLegendHighlight === 'function') {
+            window.applyRoomTypeLegendHighlight();
+        }
+        renderResolvedThumbs();
     }
 
     function applySavedRoomStates() {
@@ -1793,6 +1810,7 @@ if (btnSave) {
             // โหลดข้อมูลห้องและสิ่งของจากฐานข้อมูลแบบ Real-time
             await applyRoomStatesFromDb();
             await loadRoomInfoMapFromDb(selectedSnapshotDate);
+            await loadMaintenanceTasksFromDb();
 
             // อัปเดตแถบ Service Status ด้านซ้ายให้ตรงกับวันนั้นๆ
             if (typeof renderServiceSidebar === 'function') {
@@ -1858,8 +1876,9 @@ if (btnSave) {
     autoAssignDataRoomId();
 
     // Fetch DB states, then continue initialization that depends on those states
-    applyRoomStatesFromDb().then(() => {
-        loadRoomInfoMapFromDb(selectedSnapshotDate);
+    applyRoomStatesFromDb().then(async () => {
+        await loadRoomInfoMapFromDb(selectedSnapshotDate);
+        await loadMaintenanceTasksFromDb();
         applyApBadges();
         renderServiceSidebar();
         initAdminButtonShared();
@@ -1867,6 +1886,7 @@ if (btnSave) {
     }).catch(() => {
         // on error still attempt to render sidebar and init
         loadRoomInfoMapFromDb(selectedSnapshotDate);
+        loadMaintenanceTasksFromDb();
         applyApBadges();
         renderServiceSidebar();
         initAdminButtonShared();
@@ -2040,6 +2060,7 @@ function renderDateStrip() {
                     await window.applyRoomStatesFromDb();
                 }
                 await loadRoomInfoMapFromDb(selectedSnapshotDate);
+                await loadMaintenanceTasksFromDb();
                 
                 // 🔥 สั่งอัปเดตแถบ Service ด้านซ้ายทันทีเมื่อกดเปลี่ยนวัน
                 if (typeof renderServiceSidebar === 'function') {
@@ -2215,12 +2236,15 @@ function initDashboardSummary() {
         if (!printableW || !printableH || !planWidth || !planHeight) return;
         const scaleX = printableW / planHeight;
         const scaleY = printableH / planWidth;
-        const scale = Math.min(1, scaleX, scaleY) * 0.88;
+        const isBuildingB = document.body.getAttribute('data-building-id') === 'B' || plan.classList.contains('building-b-wrapper');
+        const fitMultiplier = isBuildingB ? 0.92 : 1.12;
+        const scale = Math.min(scaleX, scaleY) * fitMultiplier;
         const scaledW = planHeight * scale;
         const scaledH = planWidth * scale;
-        const extraShiftX = 0;
+        const extraShiftX = isBuildingB ? 110 : 120;
+        const extraShiftY = isBuildingB ? -260 : 0;
         const translateX = (printableW - scaledW) / 2 + extraShiftX;
-        const translateY = (printableH - scaledH) / 2 + scaledH;
+        const translateY = (printableH - scaledH) / 2 + scaledH + extraShiftY;
         document.body.style.setProperty('--print-page-w', `${pageW.toFixed(2)}px`);
         document.body.style.setProperty('--print-page-h', `${pageH.toFixed(2)}px`);
         document.body.style.setProperty('--print-rotate-scale', scale.toFixed(4));
@@ -2233,7 +2257,6 @@ function initDashboardSummary() {
         modal.classList.remove('hidden');
         scalePlanForPrintPortrait();
         window.updateDashboardCharts();
-        if (occupancyChart) occupancyChart.resize();
         if (maintenanceChart) maintenanceChart.resize();
     }
 
@@ -2341,9 +2364,9 @@ function applyHighlightEffect() {
             // ถ้าไม่ได้เลือกฟิลเตอร์อะไรเลย ให้แสดงผลปกติทุกห้อง
             room.classList.remove('is-dimmed-force', 'is-highlight-force');
         } else if (activeFilters.has(roomMaint)) {
-            // ถ้าห้องตรงกับสถานะที่เลือก ให้ทำตัวหนา/ชัด
+            // ถ้าห้องตรงกับสถานะที่เลือก ให้คงสภาพปกติ (ไม่เด้ง)
             room.classList.remove('is-dimmed-force');
-            room.classList.add('is-highlight-force');
+            room.classList.remove('is-highlight-force');
         } else {
             // ถ้าห้องไม่ตรง ให้จางลง
             room.classList.remove('is-highlight-force');
