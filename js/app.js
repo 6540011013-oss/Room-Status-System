@@ -774,20 +774,18 @@ function getMaintenanceSnapshotStats() {
 
     return { pendingByType, resolvedByType, resolvedRoomIds };
 }
-
 function getLatestResolvedRoomIds() {
     const log = readMaintTaskLog();
-    const latestByRoom = new Map();
+    const resolvedRoomIds = new Set();
 
     log.forEach(task => {
         const roomId = String(task?.roomId || '').trim();
-        if (!roomId || latestByRoom.has(roomId)) return;
-        latestByRoom.set(roomId, String(task?.status || '').trim().toLowerCase() === 'resolved');
-    });
-
-    const resolvedRoomIds = new Set();
-    latestByRoom.forEach((isResolved, roomId) => {
-        if (isResolved) resolvedRoomIds.add(roomId);
+        const resolvedDate = String(task?.resolvedDate || task?.resolved_date || '').trim();
+        
+        // แก้ไข: แสดงนิ้วโป้งเฉพาะเมื่อวันที่เลือก (selectedSnapshotDate) ตรงกับวันที่งานเสร็จ (resolvedDate)
+        if (task.status === 'resolved' && resolvedDate === selectedSnapshotDate) {
+            resolvedRoomIds.add(roomId);
+        }
     });
     return resolvedRoomIds;
 }
@@ -1765,31 +1763,24 @@ if (btnSave) {
         const map = loadRoomStateMap();
         applyRoomStates(map);
     }
-
-    async function applyRoomStatesFromDb() {
+    
+async function applyRoomStatesFromDb() {
         const isToday = selectedSnapshotDate === getTodayLocal();
         const res = isToday
             ? await apiRequest('get_all_room_states', { building: BUILDING_ID })
             : await apiRequest('get_room_snapshots', { building: BUILDING_ID, snapshot_date: selectedSnapshotDate });
         if (!res || !Array.isArray(res.rooms)) return;
         const map = {};
-        // Build a flexible lookup map with normalized keys so labels with spaces/hyphens still match DB
         res.rooms.forEach(row => {
             const rawId = (row.room_id || '').toString();
             const idTrim = rawId.trim();
             if (!idTrim) return;
-            // original
             map[idTrim] = row;
-            // no-spaces
             map[idTrim.replace(/\s+/g, '')] = row;
-            // normalized hyphen (e.g. "1103 - 1104" -> "1103-1104")
             map[idTrim.replace(/\s*[-–]\s*/g, '-') ] = row;
-            // digits-only
             const digits = idTrim.replace(/\D/g, '');
             if (digits) map[digits] = row;
         });
-        // Debug: show what room ids we received from the server
-        try { console.log('DEBUG: DB room keys ->', Object.keys(map)); } catch (e) {}
         applyRoomStates(map);
     }
     window.applyRoomStatesFromDb = applyRoomStatesFromDb;
