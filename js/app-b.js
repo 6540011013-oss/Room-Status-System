@@ -27,7 +27,6 @@ async function loadMaintenanceTasksFromDbB() {
             status: String(task?.status ?? 'pending').trim()
         }));
     }
-    applyRoomIconsB(); // โหลดเสร็จแล้วสั่งวาดไอคอนทันที
 }
 
 async function apiRequest(action, payload = {}) {
@@ -296,19 +295,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearRoomTypeColorsB();
     await syncTypeAndMaintFromDbB();
     await syncItemCategoriesFromDbB();
+
     if (editModeBtn) {
         if (!isAdminUser()) {
             window.isEditModeB = false;
-            if (editIcon) editIcon.innerText = "๐”’";
+            if (editIcon) editIcon.innerText = "🔒";
             if (editText) editText.innerText = "Lock Mode";
             editModeBtn.classList.remove('bg-orange-500', 'text-white');
         }
-        if (editIcon) editIcon.innerText = "๐”’";
+
         editModeBtn.onclick = function() {
             if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
             if (!isAdminUser()) { alert("Admin only."); return; }
             window.isEditModeB = !window.isEditModeB;
-            if (editIcon) editIcon.innerText = window.isEditModeB ? "๐”“" : "๐”’";
+            if (editIcon) editIcon.innerText = window.isEditModeB ? "✏️" : "🔒";
             if (editText) editText.innerText = window.isEditModeB ? "Edit Mode: ON" : "Lock Mode";
             this.classList.toggle('bg-orange-500', window.isEditModeB);
             this.classList.toggle('text-white', window.isEditModeB);
@@ -321,16 +321,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAdminButtonShared();
     initDashboardSummaryB();
     initImagePickerB();
-    applySavedRoomStatesB();
-    applyRoomStatesFromDbB();
-    loadRoomInfoMapFromDb(selectedSnapshotDate);
-    // --- เพิ่มโค้ดโหลดงานซ่อมเพื่อให้ไอคอนแสดงทันที ---
+
+    // 🔥 โหลดจาก DB อย่างเดียว
+    await applyRoomStatesFromDbB();
+    await loadRoomInfoMapFromDb(selectedSnapshotDate);
+
     if (typeof loadMaintenanceTasksFromDbB === 'function') {
         await loadMaintenanceTasksFromDbB();
     }
-    applyRoomIconsB();
 });
-
 function renderDateStripB() {
     const strip = document.getElementById('dateStrip');
     if (!strip) return;
@@ -526,6 +525,7 @@ function openEditor(roomElement) {
 
 // เพิ่ม async เข้าไปที่หน้าฟังก์ชันเพื่อให้ await ทำงานได้และไม่ขึ้นตัวแดง
 async function saveRoomChanges() {
+
     if (!currentRoom) return;
     if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
 
@@ -584,16 +584,18 @@ async function saveRoomChanges() {
         currentRoom.appendChild(badgeDiv);
     }
 
-    currentRoom.querySelectorAll('.ap-badge, .maint-icon').forEach(el => el.remove());
+    // 🔥 ล้างไอคอนเก่าออกให้เกลี้ยง (รวมถึงไอคอนเล็ก maint-icon ที่ไม่ต้องการ)
+    currentRoom.querySelectorAll('.ap-badge, .maint-icon, .filter-icon, .resolved-thumb').forEach(el => el.remove());
+    
     if (apInstalled) {
         const label = apDate ? `Installed: ${apDate}` : 'Installed: Unspecified';
         currentRoom.insertAdjacentHTML('beforeend', `<div class="ap-badge" data-info="${label}"><span class="ap-dot"></span></div>`);
     }
+
+    // 🔥 บังคับแสดงไอคอนใหญ่อยู่กลางห้องทันที (ทะลุ CSS เดิม)
     if (maintStatus) {
         const icon = getMaintIconB(maintStatus) || '🔧';
-        const note = maintNote ? `Task: ${maintNote}` : 'Task: Unspecified';
-        currentRoom.insertAdjacentHTML('beforeend', `<div class="maint-icon" data-info="${note}">${icon}</div>`);
-        document.body.classList.add('show-filter-icons');
+        currentRoom.insertAdjacentHTML('beforeend', `<span class="filter-icon" style="display: flex !important; opacity: 1 !important; visibility: visible !important;" aria-hidden="true">${icon}</span>`);
     }
 
     const roomId = getRoomIdB(currentRoom);
@@ -608,23 +610,18 @@ async function saveRoomChanges() {
         bedBadge: newBed
     };
 
-    // เรียกใช้ await ได้ตามปกติแล้ว ไม่แดงแล้ว
     persistRoomStateB(currentRoom, payload);
     
-    // โหลดข้อมูลงานซ่อมใหม่เพื่อให้ไอคอนอัปเดตทันทีเหมือนตึก A
     if (typeof loadMaintenanceTasksFromDbB === 'function') {
         await loadMaintenanceTasksFromDbB();
     }
     
     closeModal();
 }
-
 function closeModal() {
     document.getElementById('roomModal').classList.add('hidden');
     currentRoom = null;
 }
-
-
 
 function applyRoomStatesB(map) {
     if (!map || typeof map !== 'object') return;
@@ -632,7 +629,14 @@ function applyRoomStatesB(map) {
     getRoomElementsB().forEach(room => {
         const roomId = getRoomIdB(room);
         const state = map[roomId];
-        if (!state) return;
+
+        // 🔥 ล้างทุกอย่างก่อน (กัน state เก่าค้าง)
+        room.querySelectorAll('.ap-badge, .maint-icon, .filter-icon, .resolved-thumb').forEach(el => el.remove());
+
+        if (!state) {
+            room.setAttribute('data-maint', '');
+            return;
+        }
 
         const guestName = state.guestName ?? state.guest_name ?? '';
         const typeClass = state.typeClass ?? state.room_type ?? '';
@@ -670,9 +674,10 @@ function applyRoomStatesB(map) {
             room.style.setProperty('background-color', 'transparent', 'important');
         }
 
-        // จัดการ Bed Badge (DB/3P)
+        // Bed Badge
         const oldBadge = room.querySelector('.bed-badge');
         if (oldBadge) oldBadge.remove();
+
         if (bedBadge && bedBadge !== 'none') {
             const badgeDiv = document.createElement('div');
             badgeDiv.classList.add('bed-badge');
@@ -685,9 +690,10 @@ function applyRoomStatesB(map) {
             }
             room.appendChild(badgeDiv);
         }
-        // เรียกฟังก์ชันวาดไอคอนให้เหมือนตึก A
-        applyRoomIconsB();
     });
+
+    // 🔥🔥 สำคัญมาก — วาดไอคอนหลังทุกห้อง set เสร็จแล้ว
+    applyRoomIconsB();
 }
 
 async function applyRoomStatesFromDbB() {
@@ -1067,17 +1073,16 @@ function getMaintColorByIcon(icon) {
 }
 
 function getDashboardRooms() {
-    return Array.from(document.querySelectorAll('.room, .room-b'));
+    return Array.from(document.querySelectorAll('.room, .room-b'))
 }
 
 function applyRoomIconsB() {
     document.querySelectorAll('.room-b').forEach(room => {
-        // 1. เคลียร์ไอคอนเก่าออกก่อน
-        room.querySelectorAll('.ap-badge, .maint-icon, .resolved-thumb').forEach(el => el.remove());
+        // ล้างของเก่าและไอคอนอันเล็กๆ ทิ้งให้หมด
+        room.querySelectorAll('.ap-badge, .maint-icon, .filter-icon, .resolved-thumb').forEach(el => el.remove());
         
         const roomId = getRoomIdB(room);
         
-        // 2. จัดการ AP Badge
         const apInstalled = room.getAttribute('data-ap') === 'true';
         if (apInstalled) {
             const apDate = room.getAttribute('data-ap-date') || '';
@@ -1085,18 +1090,13 @@ function applyRoomIconsB() {
             room.insertAdjacentHTML('beforeend', `<div class="ap-badge" data-info="${label}"><span class="ap-dot"></span></div>`);
         }
 
-        // 3. จัดการ Maint Icon (แสดงงานซ่อมทันทีที่มีสถานะ)
+        // 🔥 สร้างไอคอนใหญ่ และแสดงผลค้างไว้เสมอ
         const maintStatus = (room.getAttribute('data-maint') || '').trim();
         if (maintStatus) {
-        // เปลี่ยนจากตัวอักษรแปลกๆ ให้เป็นประแจมาตรฐาน 🔧
-        const icon = getMaintIconB(maintStatus) || '🔧';
-        const note = maintNote ? `Task: ${maintNote}` : 'Task: Unspecified';
-        currentRoom.insertAdjacentHTML('beforeend', `<div class="maint-icon" data-info="${note}">${icon}</div>`);
-        document.body.classList.add('show-filter-icons');
-    }
+            const icon = getMaintIconB(maintStatus) || '🔧';
+            room.insertAdjacentHTML('beforeend', `<span class="filter-icon" style="display: flex !important; opacity: 1 !important; visibility: visible !important;" aria-hidden="true">${icon}</span>`);
+        }
 
-
-        // 4. จัดการ Resolved Thumb (แสดงนิ้วโป้งเฉพาะวันที่เสร็จงาน)
         const task = maintTaskLogCache.find(t => String(t.roomId) === roomId);
         const resDate = task ? String(task.resolvedDate).trim() : '';
 
@@ -1107,15 +1107,14 @@ function applyRoomIconsB() {
 }
 function applyFiltersB() {
     const rooms = getRoomElementsB();
-    document.body.classList.toggle('show-filter-icons', activeFilters.size > 0);
+    
     rooms.forEach(room => {
         room.classList.remove('dimmed', 'room-active-highlight');
-        room.querySelectorAll('.filter-icon, .maint-icon').forEach(el => el.remove());
+        // ❌ ห้ามลบ icon อีก
     });
 
     if (activeFilters.size === 0) {
-        applyRoomIconsB();
-        return;
+        return; // ❌ ไม่ต้องเรียก applyRoomIconsB()
     }
 
     const categories = (() => {
@@ -1127,16 +1126,15 @@ function applyFiltersB() {
         const rawMaint = room.getAttribute('data-maint') || "";
         const cleanMaint = rawMaint.trim();
         const isMatch = activeFilters.has(cleanMaint) || activeFilters.has(rawMaint);
-        if (!isMatch) return;
+        
+        if (!isMatch) {
+            room.classList.add('dimmed');
+            return;
+        }
 
-        const icon = iconMap.get(cleanMaint) || iconMap.get(rawMaint) || "๐”ง";
-        room.insertAdjacentHTML('beforeend', `<span class="filter-icon" aria-hidden="true">${icon}</span>`);
-        const note = (room.getAttribute('data-maint-note') || '').trim();
-        const label = note ? `Task: ${note}` : 'Task: Unspecified';
-        room.insertAdjacentHTML('beforeend', `<div class="maint-icon" data-info="${label}">${icon}</div>`);
+        room.classList.add('room-active-highlight');
     });
 }
-
 function toggleFilterB(filterName) {
     const target = filterName.trim();
     if (activeFilters.has(target)) activeFilters.delete(target); else activeFilters.add(target);

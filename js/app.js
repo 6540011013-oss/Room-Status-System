@@ -250,8 +250,10 @@ function getRoomImage(roomElement) { return String(roomElement?.getAttribute('da
 let roomInfoMapCache = {};
 const roomItemsSaveQueue = new Map();
 
-async function loadRoomInfoMapFromDb(date) {
-    const res = await apiRequest('get_room_items_snapshot', { building: BUILDING_ID, snapshot_date: date });
+async function loadRoomInfoMapFromDb() {
+    const res = await apiRequest('get_room_items', { 
+        building: BUILDING_ID 
+    });
     const map = {};
     if (res && Array.isArray(res.items)) {
         res.items.forEach(row => {
@@ -272,12 +274,11 @@ function loadRoomInfoMap() {
 
 async function saveRoomInfoMapForRoom(roomId) {
     const items = roomInfoMapCache[roomId] || [];
-    const res = await apiRequest('save_room_items_snapshot', {
-        building: BUILDING_ID,
-        room_id: roomId,
-        snapshot_date: selectedSnapshotDate,
-        items_json: JSON.stringify(items)
-    });
+    const res = await apiRequest('save_room_items', {
+    building: BUILDING_ID,
+    room_id: roomId,
+    items_json: JSON.stringify(items)
+});
     return !!(res && res.ok === true);
 }
 
@@ -1800,7 +1801,7 @@ async function applyRoomStatesFromDb() {
 
             // โหลดข้อมูลห้องและสิ่งของจากฐานข้อมูลแบบ Real-time
             await applyRoomStatesFromDb();
-            await loadRoomInfoMapFromDb(selectedSnapshotDate);
+            await loadRoomInfoMapFromDb();
             await loadMaintenanceTasksFromDb();
 
             // อัปเดตแถบ Service Status ด้านซ้ายให้ตรงกับวันนั้นๆ
@@ -1868,7 +1869,7 @@ async function applyRoomStatesFromDb() {
 
     // Fetch DB states, then continue initialization that depends on those states
     applyRoomStatesFromDb().then(async () => {
-        await loadRoomInfoMapFromDb(selectedSnapshotDate);
+       await loadRoomInfoMapFromDb();
         await loadMaintenanceTasksFromDb();
         applyApBadges();
         renderServiceSidebar();
@@ -1876,7 +1877,7 @@ async function applyRoomStatesFromDb() {
         initDashboardSummary();
     }).catch(() => {
         // on error still attempt to render sidebar and init
-        loadRoomInfoMapFromDb(selectedSnapshotDate);
+        loadRoomInfoMapFromDb()
         loadMaintenanceTasksFromDb();
         applyApBadges();
         renderServiceSidebar();
@@ -2050,7 +2051,7 @@ function renderDateStrip() {
                 if (typeof window.applyRoomStatesFromDb === 'function') {
                     await window.applyRoomStatesFromDb();
                 }
-                await loadRoomInfoMapFromDb(selectedSnapshotDate);
+               await loadRoomInfoMapFromDb();
                 await loadMaintenanceTasksFromDb();
                 
                 // 🔥 สั่งอัปเดตแถบ Service ด้านซ้ายทันทีเมื่อกดเปลี่ยนวัน

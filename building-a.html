@@ -524,7 +524,7 @@
 <div id="imageViewerModal" class="hidden fixed inset-0 flex items-center justify-center p-4" style="z-index: 22000 !important;">
     <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" data-image-viewer-close></div>
     <div class="relative z-10 w-full max-w-6xl">
-        <button type="button" class="absolute -top-12 right-0 h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white text-xl font-bold border-none cursor-pointer flex items-center justify-center" data-image-viewer-close aria-label="Close image viewer">เธฃโ€”</button>
+        <button type="button" class="absolute -top-12 right-0 h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white text-xl font-bold border-none cursor-pointer flex items-center justify-center" data-image-viewer-close aria-label="Close image viewer"> X </button>
         <img id="imageViewerImg" src="" alt="Preview" class="w-full rounded-2xl shadow-2xl object-contain bg-black/20">
         <p id="imageViewerCaption" class="mt-3 text-center text-white/90 text-sm"></p>
     </div>
@@ -837,10 +837,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const REAL_ROOM_TYPES = [];
 
     const REAL_MAINTENANCE = [
-        { name: 'WiFi Install / Network Repair', icon: 'เนยโ€เธ–' },
-        { name: 'Aircon Cleaning / Repair',       icon: 'เนยยเนเธย' },
-        { name: 'Housekeeping',                   icon: 'เนยเธเธ' },
-        { name: 'General Maintenance',            icon: 'เนยโ€เธ' }
+        { name: 'WiFi Install / Network Repair', icon: '📶' },
+        { name: 'Aircon Cleaning / Repair',       icon: '❄️' },
+        { name: 'Housekeeping',                   icon: '🧹' },
+        { name: 'General Maintenance',            icon: '🔧' }
     ];
 
     async function apiRequest(action, payload = {}) {

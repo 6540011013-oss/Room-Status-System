@@ -1678,7 +1678,6 @@ body {
         print-color-adjust: exact !important;
     }
     body.print-report .ap-badge,
-    body.print-report .maint-icon,
     body.print-report .filter-icon {
         display: grid !important;
         visibility: visible !important;

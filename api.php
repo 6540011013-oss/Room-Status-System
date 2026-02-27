@@ -340,6 +340,31 @@ switch ($action) {
         $stmt->execute([$building, $date]);
         json_ok(['items' => $stmt->fetchAll()]);
     }
+    case 'get_room_items': {
+    $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
+    if ($building === '') {
+        json_err('Missing building');
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT h.room_id, h.items_json
+        FROM room_items_history h
+        JOIN (
+            SELECT room_id, MAX(snapshot_date) as max_date
+            FROM room_items_history
+            WHERE building = ?
+            GROUP BY room_id
+        ) latest
+        ON h.room_id = latest.room_id
+        AND h.snapshot_date = latest.max_date
+        WHERE h.building = ?
+    ");
+
+    $stmt->execute([$building, $building]);
+    $rows = $stmt->fetchAll();
+
+    json_ok(['items' => $rows]);
+}
     case 'save_room_items_snapshot': {
         $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
         $roomId = trim((string)($input['room_id'] ?? $_REQUEST['room_id'] ?? ''));
