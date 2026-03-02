@@ -2178,7 +2178,7 @@ function initDashboardSummary() {
     if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
     if (printBtn) printBtn.addEventListener('click', () => {
-        prepareReportPrint();
+        document.body.classList.add('print-plan');
         window.print();
     });
 
@@ -2244,8 +2244,8 @@ function initDashboardSummary() {
     const scaledW = planHeight * scale;
     const scaledH = planWidth * scale;
 
-    const extraShiftX = isBuildingB ? 110 : 120;
-    const extraShiftY = isBuildingB ? -260 : 0;
+    const extraShiftX = isBuildingB ? 150 : 150;
+    const extraShiftY = isBuildingB ? -120 : -150;
 
     const translateX = (printableW - scaledW) / 2 + extraShiftX;
     const translateY = (printableH - scaledH) / 2 + scaledH + extraShiftY;
@@ -2280,10 +2280,12 @@ async function prepareReportPrint() {
 }
 
 
-// ✅ ทำให้ beforeprint รอ async
-window.addEventListener('beforeprint', async () => {
-    await prepareReportPrint();
+window.addEventListener('beforeprint', () => {
+    scalePlanForPrintPortrait();
+    document.body.classList.add('print-plan');
+    document.body.classList.remove('print-report');
 });
+
 
 
 window.addEventListener('afterprint', () => {
@@ -2293,8 +2295,16 @@ window.addEventListener('afterprint', () => {
     document.body.style.setProperty('--print-rotate-tx', '0px');
     document.body.style.setProperty('--print-rotate-ty', '0px');
     document.body.classList.remove('print-report');
+        document.body.classList.remove('print-plan');
 });
 }
+
+// Fallback: always force report mode for Ctrl+P / system print flows
+window.addEventListener('beforeprint', () => {
+    const dashboardModal = document.getElementById('dashboardModal');
+    if (dashboardModal) dashboardModal.classList.remove('hidden');
+    document.body.classList.add('print-report');
+});
 
 // 🔥 ทำให้ปุ่ม "ปิดงานซ่อม" โชว์/ซ่อน ทันทีที่กดเปลี่ยน Dropdown
 document.getElementById('editMaintStatus')?.addEventListener('change', function() {
@@ -2397,7 +2407,7 @@ function applyHighlightEffect() {
             room.classList.add('is-dimmed-force');
         }
     });
-}
+
     function printBuildingReport() {
     const dashboardModal = document.getElementById('dashboardModal');
     if (dashboardModal) {
@@ -2408,4 +2418,4 @@ function applyHighlightEffect() {
         window.print();
     }, 300);
 }
-
+}

@@ -1615,7 +1615,7 @@ body {
     align-items: center;
     font-weight: 700;
     font-size: 13px;
-    color: #0f172a;
+     color: #0f172a;
 }
 
 .dashboard-card__rooms {
@@ -1640,14 +1640,17 @@ body {
     .legend-block.left-info-panel {
         display: none !important;
     }
-    body.print-report > *:not(.plan-wrapper):not(.building-b-wrapper):not(#dashboardModal) { display: none !important; }
+    body.print-report > *:not(.plan-wrapper):not(.building-b-wrapper) { display: none !important; }
     body.print-report .plan-wrapper {
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
         overflow: visible !important;
         justify-content: center !important;
-        height: var(--print-page-h, 100vh) !important;
+        height: auto !important;
+        max-height: none !important;
+        page-break-after: auto;
+        break-after: auto;
     }
     body.print-report .building,
     body.print-report .building-plan {
@@ -1685,16 +1688,11 @@ body {
     }
     body.print-report #dashboardModal,
     body.print-report #dashboardModal * {
-        visibility: visible;
+        visibility: hidden !important;
     }
-    body.print-report #dashboardModal {
-        position: static;
-        inset: auto;
-        background: none;
-        padding: 0;
-        display: block !important;
-        page-break-before: always;
-        break-before: page;
+    body.print-report #dashboardModal,
+    body.print-report #dashboardModal.hidden {
+        display: none !important;
     }
     body.print-report .dashboard-modal__panel {
         margin-top: 8mm;
@@ -1708,22 +1706,47 @@ body {
     }
     body.print-report .dashboard-modal__header { display: none !important; }
     body.print-report .dashboard-modal__content { padding: 0; overflow: visible; }
+    body.print-report .dashboard-analytics,
+    body.print-report .dashboard-summary-row,
+    body.print-report .dashboard-grid,
+    body.print-report .dashboard-analytic-card,
+    body.print-report .dashboard-table-wrap,
+    body.print-report .dashboard-table,
+    body.print-report .dashboard-table tbody,
+    body.print-report .dashboard-table tr {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
     body.print-report .dashboard-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        break-inside: auto;
+    }
+    body.print-report .dashboard-summary-row {
+        gap: 8px;
+    }
+    body.print-report .sum-card {
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
     body.print-report .dashboard-analytic-card {
-        padding: 12px;
+        padding: 10px;
         border-radius: 12px;
         background: #ffffff;
         border: 1px solid #e5e7eb;
-        min-height: 200px;
+        min-height: 0;
+        page-break-inside: auto;
+        break-inside: auto;
     }
     body.print-report .dashboard-analytic-card--wide {
         grid-column: 1 / -1;
-        min-height: 220px;
+        min-height: 0;
     }
-    body.print-report .dashboard-chart-wrap { height: 160px; }
+    body.print-report .dashboard-chart-wrap {
+        height: 120px;
+        min-height: 0;
+    }
     body.print-report .dashboard-table th,
     body.print-report .dashboard-table td {
         padding: 6px 5px;
@@ -1744,10 +1767,17 @@ body {
     }
     body.print-report .dashboard-table tbody tr {
         display: table-row !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 }
 
 @media print {
+    body.print-plan,
+    body.print-plan * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
     body.print-plan > *:not(.plan-wrapper) { display: none !important; }
     body.print-plan .page-navbar,
     body.print-plan .dashboard-fab,
@@ -1765,9 +1795,19 @@ body {
         height: 100vh !important;
         overflow: visible !important;
     }
-    body.print-plan .building {
+    body.print-plan .building,
+    body.print-plan .building-plan,
+    body.print-plan .building-b-wrapper {
         transform-origin: top left !important;
-        transform: translateY(var(--print-rotate-ty, 0px)) rotate(-90deg) scale(var(--print-rotate-scale, 1)) !important;
+        transform: translate(var(--print-rotate-tx, 0px), var(--print-rotate-ty, 0px)) rotate(-90deg) scale(var(--print-rotate-scale, 1)) !important;
+    }
+    body.print-plan .room,
+    body.print-plan .room-b,
+    body.print-plan .half,
+    body.print-plan .floor > div,
+    body.print-plan .floor19 > div {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 }
 /* =========================================
