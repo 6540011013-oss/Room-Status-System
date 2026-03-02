@@ -225,6 +225,30 @@
                 pointer-events: none !important;
         }
         /* change-badge removed */
+
+@media print {
+
+  /* ให้ Dashboard เริ่มหน้าใหม่เสมอ */
+  #dashboardModal {
+      page-break-before: always !important;
+  }
+
+  /* ให้ analytics และ table แยกหน้าได้ */
+  .dashboard-analytics,
+  .dashboard-table-wrap {
+      page-break-inside: auto !important;
+  }
+
+  /* ถ้าตารางยาว ให้ตัดหน้าได้ */
+  table {
+      page-break-inside: auto !important;
+  }
+
+  tr {
+      page-break-inside: avoid !important;
+  }
+}
+
   </style>
 </head>
 <body style="margin:0;padding:0;" data-building-id="A" data-building-image="img/Andaman.jpg" data-building-title="Building A เนโฌโ€ Ocean View">

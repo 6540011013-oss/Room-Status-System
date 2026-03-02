@@ -2216,54 +2216,86 @@ function initDashboardSummary() {
     }
 
     function scalePlanForPrintPortrait() {
-        const plan = document.querySelector('.building-plan, .building, .building-b-wrapper');
-        if (!plan) return;
-        const { pageW, pageH, printableW, printableH } = getPrintPageSizePx();
-        const rect = plan.getBoundingClientRect();
-        const style = window.getComputedStyle(plan);
-        const marginX = (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0);
-        const marginY = (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
-        const planWidth = (plan.scrollWidth || rect.width) + marginX;
-        const planHeight = (plan.scrollHeight || rect.height) + marginY;
-        if (!printableW || !printableH || !planWidth || !planHeight) return;
-        const scaleX = printableW / planHeight;
-        const scaleY = printableH / planWidth;
-        const isBuildingB = document.body.getAttribute('data-building-id') === 'B' || plan.classList.contains('building-b-wrapper');
-        const fitMultiplier = isBuildingB ? 0.92 : 1.12;
-        const scale = Math.min(scaleX, scaleY) * fitMultiplier;
-        const scaledW = planHeight * scale;
-        const scaledH = planWidth * scale;
-        const extraShiftX = isBuildingB ? 110 : 120;
-        const extraShiftY = isBuildingB ? -260 : 0;
-        const translateX = (printableW - scaledW) / 2 + extraShiftX;
-        const translateY = (printableH - scaledH) / 2 + scaledH + extraShiftY;
-        document.body.style.setProperty('--print-page-w', `${pageW.toFixed(2)}px`);
-        document.body.style.setProperty('--print-page-h', `${pageH.toFixed(2)}px`);
-        document.body.style.setProperty('--print-rotate-scale', scale.toFixed(4));
-        document.body.style.setProperty('--print-rotate-tx', `${translateX.toFixed(2)}px`);
-        document.body.style.setProperty('--print-rotate-ty', `${translateY.toFixed(2)}px`);
-    }
+    const plan = document.querySelector('.building-plan, .building, .building-b-wrapper');
+    if (!plan) return;
 
-    function prepareReportPrint() {
-        document.body.classList.add('print-report');
-        modal.classList.remove('hidden');
-        scalePlanForPrintPortrait();
-        window.updateDashboardCharts();
-        if (maintenanceChart) maintenanceChart.resize();
-    }
+    const { pageW, pageH, printableW, printableH } = getPrintPageSizePx();
+    const rect = plan.getBoundingClientRect();
+    const style = window.getComputedStyle(plan);
 
-    window.addEventListener('beforeprint', () => {
-        prepareReportPrint();
-    });
-    window.addEventListener('afterprint', () => {
-        document.body.style.setProperty('--print-page-w', '');
-        document.body.style.setProperty('--print-page-h', '');
-        document.body.style.setProperty('--print-rotate-scale', '1');
-        document.body.style.setProperty('--print-rotate-tx', '0px');
-        document.body.style.setProperty('--print-rotate-ty', '0px');
-        document.body.classList.remove('print-report');
-    });
+    const marginX = (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0);
+    const marginY = (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
+
+    const planWidth = (plan.scrollWidth || rect.width) + marginX;
+    const planHeight = (plan.scrollHeight || rect.height) + marginY;
+
+    if (!printableW || !printableH || !planWidth || !planHeight) return;
+
+    const scaleX = printableW / planHeight;
+    const scaleY = printableH / planWidth;
+
+    const isBuildingB =
+        document.body.getAttribute('data-building-id') === 'B' ||
+        plan.classList.contains('building-b-wrapper');
+
+    const fitMultiplier = isBuildingB ? 0.92 : 1.12;
+    const scale = Math.min(scaleX, scaleY) * fitMultiplier;
+
+    const scaledW = planHeight * scale;
+    const scaledH = planWidth * scale;
+
+    const extraShiftX = isBuildingB ? 110 : 120;
+    const extraShiftY = isBuildingB ? -260 : 0;
+
+    const translateX = (printableW - scaledW) / 2 + extraShiftX;
+    const translateY = (printableH - scaledH) / 2 + scaledH + extraShiftY;
+
+    document.body.style.setProperty('--print-page-w', `${pageW.toFixed(2)}px`);
+    document.body.style.setProperty('--print-page-h', `${pageH.toFixed(2)}px`);
+    document.body.style.setProperty('--print-rotate-scale', scale.toFixed(4));
+    document.body.style.setProperty('--print-rotate-tx', `${translateX.toFixed(2)}px`);
+    document.body.style.setProperty('--print-rotate-ty', `${translateY.toFixed(2)}px`);
 }
+
+
+// ✅ ทำให้ async
+async function prepareReportPrint() {
+    document.body.classList.add('print-report');
+    modal.classList.remove('hidden');
+
+    scalePlanForPrintPortrait();
+
+    if (typeof updateDashboardCharts === 'function') {
+        await updateDashboardCharts();
+    }
+
+    // รอให้ chart render เสร็จ
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    if (typeof maintenanceChart !== 'undefined' && maintenanceChart) {
+        maintenanceChart.resize();
+    }
+
+    window.dispatchEvent(new Event('resize'));
+}
+
+
+// ✅ ทำให้ beforeprint รอ async
+window.addEventListener('beforeprint', async () => {
+    await prepareReportPrint();
+});
+
+
+window.addEventListener('afterprint', () => {
+    document.body.style.setProperty('--print-page-w', '');
+    document.body.style.setProperty('--print-page-h', '');
+    document.body.style.setProperty('--print-rotate-scale', '1');
+    document.body.style.setProperty('--print-rotate-tx', '0px');
+    document.body.style.setProperty('--print-rotate-ty', '0px');
+    document.body.classList.remove('print-report');
+});
+}
+
 // 🔥 ทำให้ปุ่ม "ปิดงานซ่อม" โชว์/ซ่อน ทันทีที่กดเปลี่ยน Dropdown
 document.getElementById('editMaintStatus')?.addEventListener('change', function() {
     const resolveContainer = document.getElementById('resolve-maint-container');
@@ -2366,3 +2398,14 @@ function applyHighlightEffect() {
         }
     });
 }
+    function printBuildingReport() {
+    const dashboardModal = document.getElementById('dashboardModal');
+    if (dashboardModal) {
+        dashboardModal.classList.remove('hidden');
+    }
+
+    setTimeout(() => {
+        window.print();
+    }, 300);
+}
+
