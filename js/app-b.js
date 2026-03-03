@@ -16,6 +16,14 @@ const DEFAULT_ADMIN_PASSWORD = '1234';
 function getAdminPassword() {
     const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || '').trim();
     return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
+
+    async function syncAdminPasswordFromDbB() {
+    const res = await apiRequest('get_admin_password');
+    const password = String(res?.password || '').trim();
+    if (password.length >= 4) {
+        localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, password);
+    }
+}
 }
 
 function setAdminPassword(newPassword) {
@@ -303,6 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.isEditModeB = false;
 
     clearRoomTypeColorsB();
+    await syncAdminPasswordFromDbB(); // 🔥 เพิ่มบรรทัดนี้ลงไป
     await syncTypeAndMaintFromDbB();
     await syncItemCategoriesFromDbB();
 
@@ -369,15 +378,17 @@ function renderDateStripB() {
 document.addEventListener('DOMContentLoaded', () => {
     renderDateStripB();
 });
-function initAdminPasswordSettingsB() {
-    const currentInput = document.getElementById('admin-current-password');
-    const newInput = document.getElementById('admin-new-password');
-    const confirmInput = document.getElementById('admin-confirm-password');
-    const changeBtn = document.getElementById('admin-change-password-btn');
+function initAdminPasswordSettings() {
+    const changeBtn = document.getElementById('changePasswordBtn') || document.getElementById('admin-change-password-btn');
+    
+    // 🔥 ถ้าไม่เจอปุ่มเปลี่ยนรหัส (เช่น อยู่หน้า index) ให้จบฟังก์ชันเงียบๆ ไม่ต้อง Error
+    if (!changeBtn) return; 
 
-    if (!currentInput || !newInput || !confirmInput || !changeBtn) return;
+    const currentInput = document.getElementById('currentPassword') || document.getElementById('admin-current-password');
+    const newInput = document.getElementById('newPassword') || document.getElementById('admin-new-password');
+    const confirmInput = document.getElementById('confirmPassword') || document.getElementById('admin-confirm-password');
 
-    changeBtn.addEventListener('click', () => {
+    changeBtn.addEventListener('click', async () => {
         if (localStorage.getItem('isAdmin') !== 'true') {
             alert('Admin only.');
             return;
@@ -386,27 +397,42 @@ function initAdminPasswordSettingsB() {
         const currentPassword = currentInput.value;
         const newPassword = newInput.value.trim();
         const confirmPassword = confirmInput.value.trim();
+        const savedPassword = localStorage.getItem('admin_password_v1') || '1234';
 
-        if (currentPassword !== getAdminPassword()) {
-            alert('Current password is incorrect.');
+        if (currentPassword !== savedPassword) {
+            alert('รหัสผ่านปัจจุบันไม่ถูกต้อง ❌');
             return;
         }
         if (newPassword.length < 4) {
-            alert('New password must be at least 4 characters.');
+            alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร');
             return;
         }
         if (newPassword !== confirmPassword) {
-            alert('New password and confirm password do not match.');
+            alert('รหัสผ่านใหม่ไม่ตรงกัน');
             return;
         }
 
-        setAdminPassword(newPassword);
+        // ส่งข้อมูลไปบันทึกที่ฐานข้อมูล (api.php)
+        const res = await apiRequest('set_admin_password', {
+            password: newPassword
+        });
+
+        if (!res || res.ok !== true) {
+            alert('เกิดข้อผิดพลาดในการบันทึกลงฐานข้อมูล (ลองเช็คว่าไฟล์ db.php สร้างตาราง app_settings แล้วหรือยัง)');
+            return;
+        }
+
+        // บันทึกลงเครื่อง (localStorage) หลังจากเซฟลงฐานข้อมูลสำเร็จ
+        localStorage.setItem('admin_password_v1', newPassword); 
         currentInput.value = '';
         newInput.value = '';
         confirmInput.value = '';
-        alert('Password changed successfully ✅');
+        alert('เปลี่ยนรหัสผ่านสำเร็จ! ระบบจำรหัสใหม่แล้ว ✅');
     });
 }
+
+// ถ้าอยู่ในไฟล์ app-b.js ให้พิมพ์บรรทัดนี้ไว้ด้านล่างสุดของฟังก์ชันด้วย (เผื่อโค้ดที่เรียกใช้ยังใช้ชื่อเดิม)
+window.initAdminPasswordSettingsB = initAdminPasswordSettings;
 
 function initAdminButtonShared() {
     const adminBtn = document.getElementById("adminBtnShared");

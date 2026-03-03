@@ -18,25 +18,17 @@ const DEFAULT_ADMIN_PASSWORD = '1234';
 
 function getAdminPassword() {
     const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || '').trim();
-    return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
-}
-
-function setAdminPassword(newPassword) {
-    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, String(newPassword || ''));
+    return saved.length >= 4 ? saved : '';
 }
 
 async function syncAdminPasswordFromDb() {
     const res = await apiRequest('get_admin_password');
     const password = String(res?.password || '').trim();
     if (password.length >= 4) {
-        setAdminPassword(password);
+        localStorage.setItem('admin_password_v1', password);
     }
 }
 
-async function saveAdminPasswordToDb(newPassword) {
-    const res = await apiRequest('set_admin_password', { password: String(newPassword || '') });
-    return !!res;
-}
 let maintTaskLogCache = [];
 
 async function loadMaintenanceTasksFromDb() {
@@ -298,15 +290,14 @@ function loadRoomInfoMap() {
 
 async function saveRoomInfoMapForRoom(roomId) {
     const items = roomInfoMapCache[roomId] || [];
-    await apiRequest('save_room_items_snapshot', {
-  building: BUILDING_ID,
-  room_id: roomId,
-  snapshot_date: getTodayLocal(),   // สำคัญ!!
-  items_json: JSON.stringify(items)
-});
-    return !!(res && res.ok === true);
+    const res = await apiRequest('save_room_items_snapshot', {
+        building: BUILDING_ID,
+        room_id: roomId,
+        snapshot_date: getTodayLocal(),
+        items_json: JSON.stringify(items)
+    });
+    return !!res;
 }
-
 function queueSaveRoomInfoMapForRoom(roomId) {
     const key = String(roomId || '').trim();
     if (!key) return Promise.resolve(false);
@@ -394,7 +385,6 @@ function renderRoomInfoList(roomId) {
     const map = loadRoomInfoMap();
     const isAdmin = localStorage.getItem("isAdmin") === "true";
     let items = map[roomId] || [];
-    const roomDefaultImage = currentViewingRoom ? getRoomImage(currentViewingRoom) : '';
 
     // Update count (all items)
     if(countBadge) countBadge.innerText = items.length;
@@ -436,7 +426,7 @@ function renderRoomInfoList(roomId) {
         
         // รูปภาพ
         let imgHtml = '';
-        const itemImage = (item.image && item.image.trim() !== '') ? item.image : roomDefaultImage;
+       const itemImage = (item.image && item.image.trim() !== '') ? item.image : '';
         if (itemImage && itemImage.trim() !== "") {
             imgHtml = `<img src="${itemImage}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                        <div class="hidden absolute inset-0 items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
@@ -444,7 +434,7 @@ function renderRoomInfoList(roomId) {
             imgHtml = `<div class="absolute inset-0 flex items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
         }
  const deleteButtonHtml = isAdmin
-            ? `<button onclick="deleteInfoItem('${roomId}', ${realIndex})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
+       ? `<button type="button" onclick="deleteInfoItem('${roomId}', ${realIndex}); return false;" class="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Delete
                 </button>`
@@ -1236,34 +1226,25 @@ window.saveCanvaItem = async function() {
 requestAnimationFrame(() => renderRoomInfoList(roomId));
 setTimeout(() => renderRoomInfoList(roomId), 0);
 }
-
-window.saveCanvaItem = async function(roomId) {
+window.deleteInfoItem = function(roomId, index) {
   if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
-
-  // --- ดึงค่าจากฟอร์ม (ของคุณอาจชื่อตัวแปรต่างกัน) ---
-  const name = (document.getElementById('itemName')?.value || "").trim();
-  if (!name) { alert("Item name required"); return; }
-
-  const width = Number(document.getElementById('itemWidth')?.value || 0);
-  const height = Number(document.getElementById('itemHeight')?.value || 0);
-  const note = (document.getElementById('itemNote')?.value || "").trim();
-  const category = document.getElementById('itemCategory')?.value || "other";
+  if (localStorage.getItem("isAdmin") !== "true") { alert("Admin only."); return; }
+  if (!confirm("Confirm delete this item?")) return;
 
   const map = loadRoomInfoMap();
-  if (!map[roomId]) map[roomId] = [];
+  if (!Array.isArray(map[roomId])) return;
 
-  // ✅ 1) เพิ่มเข้า state ทันที
-  map[roomId].push({ name, width, height, note, category });
+  map[roomId].splice(index, 1);
   roomInfoMapCache = map;
 
-  // ✅ 2) ปิด modal + render ทันที (กัน “กดแล้วเงียบ”)
-  closeAddItemModal?.();
+  // Optimistic UI: remove card immediately, save in background
   renderRoomInfoList(roomId);
-  setTimeout(() => renderRoomInfoList(roomId), 0);
 
-  // ✅ 3) ค่อยเซฟตามหลัง
-  const saved = await queueSaveRoomInfoMapForRoom(roomId);
-  if (!saved) alert("Cannot save item list. Please try again.");
+  queueSaveRoomInfoMapForRoom(roomId).then((saved) => {
+    if (!saved) {
+      alert("Cannot save item list. Please try again.");
+    }
+  });
 };
 
 // --- (ส่วนเดิม) Admin / Sidebar / Nuclear Fix ---
@@ -2212,12 +2193,14 @@ function initAdminButtonShared() {
     applyState();
 }
 function initAdminPasswordSettings() {
-    const currentInput = document.getElementById('admin-current-password');
-    const newInput = document.getElementById('admin-new-password');
-    const confirmInput = document.getElementById('admin-confirm-password');
-    const changeBtn = document.getElementById('admin-change-password-btn');
+    const changeBtn = document.getElementById('changePasswordBtn') || document.getElementById('admin-change-password-btn');
+    
+    // 🔥 ถ้าไม่เจอปุ่มเปลี่ยนรหัส (เช่น อยู่หน้า index) ให้จบฟังก์ชันเงียบๆ ไม่ต้อง Error
+    if (!changeBtn) return; 
 
-    if (!currentInput || !newInput || !confirmInput || !changeBtn) return;
+    const currentInput = document.getElementById('currentPassword') || document.getElementById('admin-current-password');
+    const newInput = document.getElementById('newPassword') || document.getElementById('admin-new-password');
+    const confirmInput = document.getElementById('confirmPassword') || document.getElementById('admin-confirm-password');
 
     changeBtn.addEventListener('click', async () => {
         if (localStorage.getItem('isAdmin') !== 'true') {
@@ -2228,31 +2211,37 @@ function initAdminPasswordSettings() {
         const currentPassword = currentInput.value;
         const newPassword = newInput.value.trim();
         const confirmPassword = confirmInput.value.trim();
+        const savedPassword = localStorage.getItem('admin_password_v1') || '1234';
 
-        if (currentPassword !== getAdminPassword()) {
-            alert('Current password is incorrect.');
+        if (currentPassword !== savedPassword) {
+            alert('รหัสผ่านปัจจุบันไม่ถูกต้อง ❌');
             return;
         }
         if (newPassword.length < 4) {
-            alert('New password must be at least 4 characters.');
+            alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร');
             return;
         }
         if (newPassword !== confirmPassword) {
-            alert('New password and confirm password do not match.');
+            alert('รหัสผ่านใหม่ไม่ตรงกัน');
             return;
         }
 
-        const saved = await saveAdminPasswordToDb(newPassword);
-        if (!saved) {
-            alert('Cannot save password to database.');
+        // ส่งข้อมูลไปบันทึกที่ฐานข้อมูล (api.php)
+        const res = await apiRequest('set_admin_password', {
+            password: newPassword
+        });
+
+        if (!res || res.ok !== true) {
+            alert('เกิดข้อผิดพลาดในการบันทึกลงฐานข้อมูล (ลองเช็คว่าไฟล์ db.php สร้างตาราง app_settings แล้วหรือยัง)');
             return;
         }
 
-        setAdminPassword(newPassword);
+        // บันทึกลงเครื่อง (localStorage) หลังจากเซฟลงฐานข้อมูลสำเร็จ
+        localStorage.setItem('admin_password_v1', newPassword); 
         currentInput.value = '';
         newInput.value = '';
         confirmInput.value = '';
-        alert('Password changed successfully ✅');
+        alert('เปลี่ยนรหัสผ่านสำเร็จ! ระบบจำรหัสใหม่แล้ว ✅');
     });
 }
 function initDashboardSummary() {
