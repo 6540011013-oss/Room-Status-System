@@ -466,6 +466,38 @@
 const ADMIN_PASSWORD_STORAGE_KEY = "admin_password_v1";
   const DEFAULT_ADMIN_PASSWORD = "1234";
 
+  // 🔥 1. เพิ่มฟังก์ชันเชื่อมต่อ API (api.php) 🔥
+  async function apiRequest(action, payload = {}) {
+      try {
+          const res = await fetch('api.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action, ...payload })
+          });
+          const data = await res.json();
+          if (!data || data.ok !== true) throw new Error(data.error || 'API error');
+          return data;
+      } catch (err) {
+          console.warn('API request failed:', err);
+          return null;
+      }
+  }
+
+  // 🔥 2. เพิ่มฟังก์ชันดึงรหัสจากฐานข้อมูล 🔥
+  async function syncAdminPasswordFromDb() {
+      const res = await apiRequest('get_admin_password');
+      if (res && res.password) {
+          const password = String(res.password).trim();
+          if (password.length >= 4) {
+              localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, password);
+          }
+      }
+  }
+
+  function getAdminPassword() {
+      const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "").trim();
+      return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
+  }
   function getAdminPassword() {
       const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "").trim();
       return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
@@ -518,17 +550,39 @@ const ADMIN_PASSWORD_STORAGE_KEY = "admin_password_v1";
     }
   });
 
-  loginBtn.addEventListener("click", () => {
-   if (passInput.value === getAdminPassword()) {
-      localStorage.setItem("isAdmin", "true");
-      setAdminState();
-      modal.classList.add("hidden");
-      alert("Admin mode enabled ✅");
-    } else {
-      alert("Incorrect password ❌");
-    }
-  });
+ // ฟังก์ชันเช็ค Login ในหน้า index.html
 
+loginBtn.addEventListener("click", async () => {
+
+    const inputPass = passInput.value;
+
+    
+
+    // 1. ดึงรหัสล่าสุดจากฐานข้อมูลก่อนเช็ค
+
+    await syncAdminPasswordFromDb(); 
+
+    const correctPass = getAdminPassword();
+
+
+
+    if (inputPass === correctPass) {
+
+        localStorage.setItem("isAdmin", "true");
+
+        setAdminState();
+
+        modal.classList.add("hidden");
+
+        alert("Admin mode enabled ✅");
+
+    } else {
+
+        alert("Incorrect password❌");
+
+    }
+
+});
   passInput.addEventListener("keypress", (e) => {
       if(e.key === "Enter") loginBtn.click();
   });
@@ -626,6 +680,8 @@ guideImage?.addEventListener("touchend", (e) => {
   if (diff > 50) prevPage();
   if (diff < -50) nextPage();
 });
+checkLoginStatus();
+  syncAdminPasswordFromDb(); // 🔥 4. เพิ่มคำสั่งนี้ให้โหลดรหัสใหม่ทุกครั้งที่เปิดหน้าเว็บ
 
 updateGuideImage();
 
