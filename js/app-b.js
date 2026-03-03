@@ -10,7 +10,17 @@ let maintenanceChart = null;
 const BUILDING_ID = 'B';
 const API_URL = 'api.php';
 const DATE_STORAGE_KEY = 'room_snapshot_date_b_v1';
+const ADMIN_PASSWORD_STORAGE_KEY = 'admin_password_v1';
+const DEFAULT_ADMIN_PASSWORD = '1234';
 
+function getAdminPassword() {
+    const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || '').trim();
+    return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
+}
+
+function setAdminPassword(newPassword) {
+    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, String(newPassword || ''));
+}
 let maintTaskLogCache = []; // เพิ่มตัวแปรเก็บข้อมูลงานซ่อม
 
 async function loadMaintenanceTasksFromDbB() {
@@ -319,6 +329,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRoomClicks();
     initModalEvents();
     initAdminButtonShared();
+    initAdminPasswordSettingsB();
     initDashboardSummaryB();
     initImagePickerB();
 
@@ -358,6 +369,44 @@ function renderDateStripB() {
 document.addEventListener('DOMContentLoaded', () => {
     renderDateStripB();
 });
+function initAdminPasswordSettingsB() {
+    const currentInput = document.getElementById('admin-current-password');
+    const newInput = document.getElementById('admin-new-password');
+    const confirmInput = document.getElementById('admin-confirm-password');
+    const changeBtn = document.getElementById('admin-change-password-btn');
+
+    if (!currentInput || !newInput || !confirmInput || !changeBtn) return;
+
+    changeBtn.addEventListener('click', () => {
+        if (localStorage.getItem('isAdmin') !== 'true') {
+            alert('Admin only.');
+            return;
+        }
+
+        const currentPassword = currentInput.value;
+        const newPassword = newInput.value.trim();
+        const confirmPassword = confirmInput.value.trim();
+
+        if (currentPassword !== getAdminPassword()) {
+            alert('Current password is incorrect.');
+            return;
+        }
+        if (newPassword.length < 4) {
+            alert('New password must be at least 4 characters.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert('New password and confirm password do not match.');
+            return;
+        }
+
+        setAdminPassword(newPassword);
+        currentInput.value = '';
+        newInput.value = '';
+        confirmInput.value = '';
+        alert('Password changed successfully ✅');
+    });
+}
 
 function initAdminButtonShared() {
     const adminBtn = document.getElementById("adminBtnShared");
@@ -726,6 +775,7 @@ function renderRoomInfoListB(roomId) {
     if (!listEl) return;
 
     const map = loadRoomInfoMapB();
+    const isAdmin = localStorage.getItem("isAdmin") === "true";
     let items = map[roomId] || [];
     if (countBadge) countBadge.innerText = items.length;
 
@@ -766,7 +816,12 @@ function renderRoomInfoListB(roomId) {
         } else {
             imgHtml = `<div class="absolute inset-0 flex items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
         }
-
+const deleteButtonHtml = isAdmin
+            ? `<button onclick="deleteInfoItemB('${roomId}', ${realIndex})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete
+                </button>`
+            : '';
         card.innerHTML = `
             <div class="relative h-36 bg-gradient-to-br from-slate-100 to-slate-200">
                 ${imgHtml}
@@ -781,10 +836,7 @@ function renderRoomInfoListB(roomId) {
                     ${dimText}
                 </p>
                 ${noteHtml}
-                <button onclick="deleteInfoItemB('${roomId}', ${realIndex})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    Delete
-                </button>
+                 ${deleteButtonHtml}
             </div>
         `;
         listEl.appendChild(card);
@@ -1030,6 +1082,7 @@ window.saveCanvaItem = function() {
 
 window.deleteInfoItemB = function(roomId, index) {
     if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
+    if (localStorage.getItem("isAdmin") !== "true") { alert("Admin only."); return; }
     if(!confirm("Confirm delete this item?")) return;
     const map = loadRoomInfoMapB();
     if (map[roomId]) {

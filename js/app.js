@@ -13,6 +13,30 @@ let maintenanceChart = null;
 const BUILDING_ID = String(document.body?.dataset?.buildingId || 'A').trim().toUpperCase();
 const API_URL = 'api.php';
 const DATE_STORAGE_KEY = `room_snapshot_date_${BUILDING_ID.toLowerCase()}_v1`;
+const ADMIN_PASSWORD_STORAGE_KEY = 'admin_password_v1';
+const DEFAULT_ADMIN_PASSWORD = '1234';
+
+function getAdminPassword() {
+    const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || '').trim();
+    return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
+}
+
+function setAdminPassword(newPassword) {
+    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, String(newPassword || ''));
+}
+
+async function syncAdminPasswordFromDb() {
+    const res = await apiRequest('get_admin_password');
+    const password = String(res?.password || '').trim();
+    if (password.length >= 4) {
+        setAdminPassword(password);
+    }
+}
+
+async function saveAdminPasswordToDb(newPassword) {
+    const res = await apiRequest('set_admin_password', { password: String(newPassword || '') });
+    return !!res;
+}
 let maintTaskLogCache = [];
 
 async function loadMaintenanceTasksFromDb() {
@@ -274,10 +298,11 @@ function loadRoomInfoMap() {
 
 async function saveRoomInfoMapForRoom(roomId) {
     const items = roomInfoMapCache[roomId] || [];
-    const res = await apiRequest('save_room_items', {
-    building: BUILDING_ID,
-    room_id: roomId,
-    items_json: JSON.stringify(items)
+    await apiRequest('save_room_items_snapshot', {
+  building: BUILDING_ID,
+  room_id: roomId,
+  snapshot_date: getTodayLocal(),   // สำคัญ!!
+  items_json: JSON.stringify(items)
 });
     return !!(res && res.ok === true);
 }
@@ -367,6 +392,7 @@ function renderRoomInfoList(roomId) {
     if (!listEl) return;
 
     const map = loadRoomInfoMap();
+    const isAdmin = localStorage.getItem("isAdmin") === "true";
     let items = map[roomId] || [];
     const roomDefaultImage = currentViewingRoom ? getRoomImage(currentViewingRoom) : '';
 
@@ -417,6 +443,12 @@ function renderRoomInfoList(roomId) {
         } else {
             imgHtml = `<div class="absolute inset-0 flex items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
         }
+ const deleteButtonHtml = isAdmin
+            ? `<button onclick="deleteInfoItem('${roomId}', ${realIndex})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete
+                </button>`
+            : '';
 
         card.innerHTML = `
             <button type="button" class="item-preview-trigger relative h-36 w-full bg-gradient-to-br from-slate-100 to-slate-200 border-none p-0">
@@ -432,10 +464,7 @@ function renderRoomInfoList(roomId) {
                     ${dimText}
                 </p>
                 ${noteHtml}
-                <button onclick="deleteInfoItem('${roomId}', ${realIndex})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    Delete
-                </button>
+                ${deleteButtonHtml}
             </div>
         `;
         const previewBtn = card.querySelector('.item-preview-trigger');
@@ -1143,7 +1172,7 @@ function initImagePicker() {
 window.saveCanvaItem = async function() {
     if (!currentViewingRoom) return;
     if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
-
+ if (localStorage.getItem("isAdmin") !== "true") { alert("Admin only."); return; }
     const nameEl = el('item-name-input');
     const widthEl = el('item-width-input');
     const heightEl = el('item-height-input');
@@ -1201,25 +1230,40 @@ window.saveCanvaItem = async function() {
         apiRequest('save_room_snapshot', { ...payload, snapshot_date: getTodayLocal() });
     }
 
-    closeAddItemModal();
-    renderRoomInfoList(roomId);
+   closeAddItemModal();
+
+// ✅ บังคับให้ DOM อัปเดตแล้วค่อย render
+requestAnimationFrame(() => renderRoomInfoList(roomId));
+setTimeout(() => renderRoomInfoList(roomId), 0);
 }
 
-window.deleteInfoItem = function(roomId, index) {
-    if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
-    if(!confirm("Confirm delete this item?")) return;
-    const map = loadRoomInfoMap();
-    if (map[roomId]) {
-        map[roomId].splice(index, 1);
-        roomInfoMapCache = map;
-        queueSaveRoomInfoMapForRoom(roomId).then((saved) => {
-            if (!saved) {
-                alert("Cannot save item list after delete. Please try again.");
-                return;
-            }
-            renderRoomInfoList(roomId);
-        });
-    }
+window.saveCanvaItem = async function(roomId) {
+  if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
+
+  // --- ดึงค่าจากฟอร์ม (ของคุณอาจชื่อตัวแปรต่างกัน) ---
+  const name = (document.getElementById('itemName')?.value || "").trim();
+  if (!name) { alert("Item name required"); return; }
+
+  const width = Number(document.getElementById('itemWidth')?.value || 0);
+  const height = Number(document.getElementById('itemHeight')?.value || 0);
+  const note = (document.getElementById('itemNote')?.value || "").trim();
+  const category = document.getElementById('itemCategory')?.value || "other";
+
+  const map = loadRoomInfoMap();
+  if (!map[roomId]) map[roomId] = [];
+
+  // ✅ 1) เพิ่มเข้า state ทันที
+  map[roomId].push({ name, width, height, note, category });
+  roomInfoMapCache = map;
+
+  // ✅ 2) ปิด modal + render ทันที (กัน “กดแล้วเงียบ”)
+  closeAddItemModal?.();
+  renderRoomInfoList(roomId);
+  setTimeout(() => renderRoomInfoList(roomId), 0);
+
+  // ✅ 3) ค่อยเซฟตามหลัง
+  const saved = await queueSaveRoomInfoMapForRoom(roomId);
+  if (!saved) alert("Cannot save item list. Please try again.");
 };
 
 // --- (ส่วนเดิม) Admin / Sidebar / Nuclear Fix ---
@@ -1426,7 +1470,7 @@ function populateMaintenanceDropdown() {
 
 // --- Init ---
 document.addEventListener('DOMContentLoaded', async function() {
-    await syncRoomTypesFromDb();
+    await syncAdminPasswordFromDb();
     await syncItemCategoriesFromDb();
     document.body.classList.remove('show-filter-icons');
     let isEditMode = false;
@@ -1874,6 +1918,7 @@ async function applyRoomStatesFromDb() {
         applyApBadges();
         renderServiceSidebar();
         initAdminButtonShared();
+         initAdminPasswordSettings();
         initDashboardSummary();
     }).catch(() => {
         // on error still attempt to render sidebar and init
@@ -1882,6 +1927,7 @@ async function applyRoomStatesFromDb() {
         applyApBadges();
         renderServiceSidebar();
         initAdminButtonShared();
+         initAdminPasswordSettings();
         initDashboardSummary();
     });
 
@@ -2104,7 +2150,7 @@ function initAdminButtonShared() {
 
     const adminClass = "flex items-center gap-2 px-6 py-2.5 rounded-full bg-green-600 border-2 border-green-600 text-white text-xs font-black hover:bg-green-700 transition-all duration-300 group shadow-sm nav-btn-shape";
     const guestClass = "flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-slate-800 text-slate-800 text-xs font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm nav-btn-shape";
-    const ADMIN_PASSWORD = "1234";
+
 
     const applyState = () => {
         if (localStorage.getItem("isAdmin") === "true") {
@@ -2134,8 +2180,13 @@ function initAdminButtonShared() {
     });
 
     if (loginBtn && passInput && modal) {
-        loginBtn.addEventListener("click", () => {
-            if (passInput.value === ADMIN_PASSWORD) {
+        loginBtn.addEventListener("click", async () => {
+            let adminPassword = getAdminPassword();
+            if (passInput.value !== adminPassword) {
+                await syncAdminPasswordFromDb();
+                adminPassword = getAdminPassword();
+            }
+            if (passInput.value === adminPassword) {
                 localStorage.setItem("isAdmin", "true");
                 applyState();
                 modal.classList.add("hidden");
@@ -2160,7 +2211,50 @@ function initAdminButtonShared() {
     window.addEventListener("storage", (e) => { if (e.key === "isAdmin") applyState(); });
     applyState();
 }
+function initAdminPasswordSettings() {
+    const currentInput = document.getElementById('admin-current-password');
+    const newInput = document.getElementById('admin-new-password');
+    const confirmInput = document.getElementById('admin-confirm-password');
+    const changeBtn = document.getElementById('admin-change-password-btn');
 
+    if (!currentInput || !newInput || !confirmInput || !changeBtn) return;
+
+    changeBtn.addEventListener('click', async () => {
+        if (localStorage.getItem('isAdmin') !== 'true') {
+            alert('Admin only.');
+            return;
+        }
+
+        const currentPassword = currentInput.value;
+        const newPassword = newInput.value.trim();
+        const confirmPassword = confirmInput.value.trim();
+
+        if (currentPassword !== getAdminPassword()) {
+            alert('Current password is incorrect.');
+            return;
+        }
+        if (newPassword.length < 4) {
+            alert('New password must be at least 4 characters.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert('New password and confirm password do not match.');
+            return;
+        }
+
+        const saved = await saveAdminPasswordToDb(newPassword);
+        if (!saved) {
+            alert('Cannot save password to database.');
+            return;
+        }
+
+        setAdminPassword(newPassword);
+        currentInput.value = '';
+        newInput.value = '';
+        confirmInput.value = '';
+        alert('Password changed successfully ✅');
+    });
+}
 function initDashboardSummary() {
     const btn = document.getElementById('dashboardBtn');
     const modal = document.getElementById('dashboardModal');
@@ -2244,8 +2338,8 @@ function initDashboardSummary() {
     const scaledW = planHeight * scale;
     const scaledH = planWidth * scale;
 
-    const extraShiftX = isBuildingB ? 150 : 150;
-    const extraShiftY = isBuildingB ? -120 : -150;
+    const extraShiftX = isBuildingB ? 80 : 150;
+    const extraShiftY = isBuildingB ? -370 : -150;
 
     const translateX = (printableW - scaledW) / 2 + extraShiftX;
     const translateY = (printableH - scaledH) / 2 + scaledH + extraShiftY;

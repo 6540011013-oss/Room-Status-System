@@ -463,7 +463,13 @@
   const loginBtn = document.getElementById("loginConfirm");
   const cancelBtn = document.getElementById("loginCancel");
 
-  const ADMIN_PASSWORD = "1234";
+const ADMIN_PASSWORD_STORAGE_KEY = "admin_password_v1";
+  const DEFAULT_ADMIN_PASSWORD = "1234";
+
+  function getAdminPassword() {
+      const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "").trim();
+      return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
+  }
 
   function checkLoginStatus() {
       if (localStorage.getItem("isAdmin") === "true") {
@@ -513,7 +519,7 @@
   });
 
   loginBtn.addEventListener("click", () => {
-    if (passInput.value === ADMIN_PASSWORD) {
+   if (passInput.value === getAdminPassword()) {
       localStorage.setItem("isAdmin", "true");
       setAdminState();
       modal.classList.add("hidden");

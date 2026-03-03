@@ -76,6 +76,26 @@ switch ($action) {
         $stmt = $pdo->query('SELECT id, name, color FROM room_types ORDER BY name');
         json_ok(['room_types' => $stmt->fetchAll()]);
     }
+    case 'get_admin_password': {
+        $stmt = $pdo->prepare('SELECT setting_value FROM app_settings WHERE setting_key = ? LIMIT 1');
+        $stmt->execute(['admin_password']);
+        $row = $stmt->fetch();
+        $password = trim((string)($row['setting_value'] ?? ''));
+        json_ok(['password' => $password]);
+    }
+    case 'set_admin_password': {
+        $password = trim((string)($input['password'] ?? $_REQUEST['password'] ?? ''));
+        if (mb_strlen($password) < 4) {
+            json_err('Password must be at least 4 characters');
+        }
+        $stmt = $pdo->prepare("
+            INSERT INTO app_settings (setting_key, setting_value)
+            VALUES ('admin_password', ?)
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+        ");
+        $stmt->execute([$password]);
+        json_ok();
+    }
     case 'add_room_type': {
         $id = trim((string)($input['id'] ?? $_REQUEST['id'] ?? ''));
         $name = trim((string)($input['name'] ?? $_REQUEST['name'] ?? ''));

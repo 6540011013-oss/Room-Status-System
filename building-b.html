@@ -681,18 +681,17 @@ function toggleAPDate() {
           <div class="max-w-sm space-y-4">
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-1.5">Current Password</label>
-              <input type="password" placeholder="" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+              <input type="password" id="admin-current-password" placeholder="Enter current password" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
             </div>
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-1.5">New Password</label>
-              <input type="password" placeholder="At least 4 characters" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+              <input type="password" id="admin-new-password" placeholder="At least 4 characters" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
             </div>
             <div>
-              <label class="block text-sm font-bold text-slate-700 mb-1.5">New Password</label>
-              <input type="password" placeholder="" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+              <label class="block text-sm font-bold text-slate-700 mb-1.5">Confirm New Password</label>
+              <input type="password" id="admin-confirm-password" placeholder="Confirm new password" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
             </div>
-            <button onclick="alert('Demo: Changed Password');" class="w-full py-3 rounded-xl border-none text-white font-extrabold text-sm cursor-pointer bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25">
-              Change Password
+            <button type="button" id="admin-change-password-btn" class="w-full py-3 rounded-xl border-none text-white font-extrabold text-sm cursor-pointer bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25">
             </button>
           </div>
         </div>
