@@ -13,6 +13,8 @@ let maintenanceChart = null;
 const BUILDING_ID = String(document.body?.dataset?.buildingId || 'A').trim().toUpperCase();
 const API_URL = 'api.php';
 const DATE_STORAGE_KEY = `room_snapshot_date_${BUILDING_ID.toLowerCase()}_v1`;
+const DATE_RANGE_START_STORAGE_KEY = `room_snapshot_range_start_${BUILDING_ID.toLowerCase()}_v1`;
+const DATE_RANGE_END_STORAGE_KEY = `room_snapshot_range_end_${BUILDING_ID.toLowerCase()}_v1`;
 const ADMIN_PASSWORD_STORAGE_KEY = 'admin_password_v1';
 const DEFAULT_ADMIN_PASSWORD = '1234';
 
@@ -30,6 +32,25 @@ async function syncAdminPasswordFromDb() {
 }
 
 let maintTaskLogCache = [];
+let quickSaveInFlight = 0;
+let quickSidebarSyncTimer = null;
+
+function scheduleQuickSidebarSync() {
+    if (quickSidebarSyncTimer) {
+        clearTimeout(quickSidebarSyncTimer);
+    }
+    quickSidebarSyncTimer = window.setTimeout(async () => {
+        // Wait until quick-save requests settle, then refresh once.
+        if (quickSaveInFlight > 0) {
+            scheduleQuickSidebarSync();
+            return;
+        }
+        await loadMaintenanceTasksFromDb();
+        if (typeof window.renderServiceSidebar === 'function') {
+            window.renderServiceSidebar();
+        }
+    }, 260);
+}
 
 async function loadMaintenanceTasksFromDb() {
     const res = await apiRequest('get_maintenance_tasks', { building: BUILDING_ID });
@@ -91,11 +112,57 @@ function getTodayLocal() {
 }
 
 let selectedSnapshotDate = localStorage.getItem(DATE_STORAGE_KEY) || getTodayLocal();
-if (selectedSnapshotDate !== getTodayLocal()) {
-    // Default to today on new page load to avoid showing stale snapshots by accident.
+if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedSnapshotDate)) {
     selectedSnapshotDate = getTodayLocal();
     localStorage.setItem(DATE_STORAGE_KEY, selectedSnapshotDate);
 }
+let selectedRangeStartDate = localStorage.getItem(DATE_RANGE_START_STORAGE_KEY) || selectedSnapshotDate;
+let selectedRangeEndDate = localStorage.getItem(DATE_RANGE_END_STORAGE_KEY) || selectedSnapshotDate;
+
+function syncSelectedDateRange() {
+    let start = String(selectedRangeStartDate || '').trim();
+    let end = String(selectedRangeEndDate || '').trim();
+    if (!start) start = selectedSnapshotDate;
+    if (!end) end = selectedSnapshotDate;
+    if (start > end) {
+        const t = start;
+        start = end;
+        end = t;
+    }
+    selectedRangeStartDate = start;
+    selectedRangeEndDate = end;
+    selectedSnapshotDate = end;
+    localStorage.setItem(DATE_STORAGE_KEY, selectedSnapshotDate);
+    localStorage.setItem(DATE_RANGE_START_STORAGE_KEY, selectedRangeStartDate);
+    localStorage.setItem(DATE_RANGE_END_STORAGE_KEY, selectedRangeEndDate);
+}
+
+function isDateRangeMode() {
+    return selectedRangeStartDate !== selectedRangeEndDate;
+}
+
+function dateInSelectedRange(dateISO) {
+    const d = String(dateISO || '').trim();
+    if (!d) return false;
+    return d >= selectedRangeStartDate && d <= selectedRangeEndDate;
+}
+
+function setSelectedDateRange(startISO, endISO) {
+    selectedRangeStartDate = String(startISO || '').slice(0, 10);
+    selectedRangeEndDate = String(endISO || '').slice(0, 10);
+    syncSelectedDateRange();
+}
+
+function setSelectedSingleDate(dateISO) {
+    const d = String(dateISO || '').slice(0, 10);
+    setSelectedDateRange(d, d);
+}
+
+function isTodayEditableSelection() {
+    return !isDateRangeMode() && selectedSnapshotDate === getTodayLocal();
+}
+
+syncSelectedDateRange();
 
 // สีห้อง (ดึงจาก SQL เท่านั้น)
 const ROOM_COLORS = {};
@@ -203,6 +270,28 @@ window.openAddCategoryModal = async function() {
     await syncItemCategoriesFromDb();
 };
 
+function getItemCategoryUsage(categoryName) {
+    const normalizedTarget = normalizeCategoryName(categoryName);
+    const map = loadRoomInfoMap() || {};
+    let itemCount = 0;
+    const roomIds = [];
+
+    Object.entries(map).forEach(([roomId, items]) => {
+        if (!Array.isArray(items) || !items.length) return;
+        const usedInRoom = items.filter(item => normalizeCategoryName(item?.category) === normalizedTarget).length;
+        if (usedInRoom > 0) {
+            itemCount += usedInRoom;
+            roomIds.push(String(roomId).trim());
+        }
+    });
+
+    return {
+        itemCount,
+        roomCount: roomIds.length,
+        roomIds
+    };
+}
+
 window.deleteItemCategory = async function(name) {
     if (localStorage.getItem("isAdmin") !== "true") {
         alert("Admin only.");
@@ -214,7 +303,22 @@ window.deleteItemCategory = async function(name) {
         alert('At least 1 category must remain.');
         return;
     }
-    if (!confirm(`Delete category "${categoryName}" ?`)) return;
+
+    await loadRoomInfoMapFromDb();
+    const usage = getItemCategoryUsage(categoryName);
+
+    if (usage.itemCount > 0) {
+        const previewRooms = usage.roomIds.slice(0, 5).join(', ');
+        const moreText = usage.roomCount > 5 ? ', ...' : '';
+        const warningMsg =
+            `This category is still used by ${usage.itemCount} item(s) in ${usage.roomCount} room(s).\n` +
+            `Rooms: ${previewRooms}${moreText}\n\n` +
+            `Delete category "${categoryName}" anyway?`;
+        if (!confirm(warningMsg)) return;
+    } else {
+        if (!confirm(`Delete category "${categoryName}" ?`)) return;
+    }
+
     const res = await apiRequest('delete_item_category', { name: categoryName });
     if (!res) {
         alert('Cannot delete category.');
@@ -558,7 +662,7 @@ window.toggleRoomInfoNotePanel = function(forceOpen) {
 }
 
 window.enterRoomInfoNoteEdit = function() {
-    if (selectedSnapshotDate !== getTodayLocal()) {
+    if (!isTodayEditableSelection()) {
         alert("View only (past date).");
         return;
     }
@@ -574,7 +678,7 @@ window.cancelRoomInfoNoteEdit = function() {
 
 window.saveRoomInfoNote = async function() {
     if (!currentViewingRoom) return;
-    if (selectedSnapshotDate !== getTodayLocal()) {
+    if (!isTodayEditableSelection()) {
         alert("View only (past date).");
         return;
     }
@@ -762,7 +866,33 @@ function getTaskStateOnDate(task, dateISO, todayISO) {
     if (status === 'resolved') {
         if (!resolvedDate) return (dateISO <= todayISO) ? 'pending' : null;
         if (dateISO < resolvedDate) return 'pending';
-        return 'resolved';
+        if (dateISO === resolvedDate) return 'resolved';
+        return null;
+    }
+
+    return null;
+}
+
+function getTaskStateInRange(task, startISO, endISO, todayISO) {
+    const reportedDate = String(task?.reportedDate || task?.reported_date || '').trim();
+    const resolvedDate = String(task?.resolvedDate || task?.resolved_date || '').trim();
+    const status = String(task?.status || 'pending').trim();
+    if (!reportedDate || !startISO || !endISO) return null;
+    if (reportedDate > endISO) return null;
+
+    if (status === 'pending') {
+        const cappedEnd = endISO > todayISO ? todayISO : endISO;
+        return reportedDate <= cappedEnd ? 'pending' : null;
+    }
+
+    if (status === 'resolved') {
+        if (resolvedDate && resolvedDate >= startISO && resolvedDate <= endISO) return 'resolved';
+        if (!resolvedDate) {
+            const cappedEnd = endISO > todayISO ? todayISO : endISO;
+            return reportedDate <= cappedEnd ? 'pending' : null;
+        }
+        const hasPendingWindow = reportedDate <= endISO && resolvedDate > startISO;
+        return hasPendingWindow ? 'pending' : null;
     }
 
     return null;
@@ -780,7 +910,9 @@ function getMaintenanceSnapshotStats() {
         const roomId = String(task?.roomId || '').trim();
         if (!type || !roomId) return;
 
-        const state = getTaskStateOnDate(task, selectedSnapshotDate, todayISO);
+        const state = isDateRangeMode()
+            ? getTaskStateInRange(task, selectedRangeStartDate, selectedRangeEndDate, todayISO)
+            : getTaskStateOnDate(task, selectedSnapshotDate, todayISO);
         if (!state) return;
 
         if (state === 'pending') {
@@ -794,36 +926,80 @@ function getMaintenanceSnapshotStats() {
 
     return { pendingByType, resolvedByType, resolvedRoomIds };
 }
-function getLatestResolvedRoomIds() {
+function getLatestResolvedRoomIds(typeFilters = null) {
     const log = readMaintTaskLog();
     const resolvedRoomIds = new Set();
+    const hasTypeFilter = typeFilters instanceof Set && typeFilters.size > 0;
 
     log.forEach(task => {
         const roomId = String(task?.roomId || '').trim();
+        const taskType = String(task?.type || '').trim();
         const resolvedDate = String(task?.resolvedDate || task?.resolved_date || '').trim();
-        
-        // แก้ไข: แสดงนิ้วโป้งเฉพาะเมื่อวันที่เลือก (selectedSnapshotDate) ตรงกับวันที่งานเสร็จ (resolvedDate)
-        if (task.status === 'resolved' && resolvedDate === selectedSnapshotDate) {
-            resolvedRoomIds.add(roomId);
+        if (!roomId) return;
+        if (hasTypeFilter && !typeFilters.has(taskType)) return;
+
+        const isResolvedInRange = isDateRangeMode()
+            ? dateInSelectedRange(resolvedDate)
+            : (resolvedDate === selectedSnapshotDate);
+        if (task.status === 'resolved' && isResolvedInRange) {
+            buildRoomIdVariants(roomId).forEach(id => resolvedRoomIds.add(id));
         }
     });
     return resolvedRoomIds;
 }
 
+function buildRoomIdVariants(rawRoomId) {
+    const roomId = String(rawRoomId || '').trim();
+    if (!roomId) return [];
+    const variants = new Set([roomId]);
+
+    const compact = roomId.replace(/\s+/g, '');
+    if (compact) variants.add(compact);
+
+    const normalizedRange = roomId.replace(/\s*[-–]\s*/g, '-');
+    if (normalizedRange) variants.add(normalizedRange);
+
+    const prefix = (roomId.match(/^\s*([0-9]+)\b/) || [])[1];
+    if (prefix) variants.add(prefix);
+
+    const range = (roomId.match(/([0-9]+)\s*[-–]\s*([0-9]+)/) || []);
+    if (range[1]) {
+        variants.add(range[1]);
+        if (range[2]) variants.add(range[2]);
+        if (range[2]) variants.add(`${range[1]}-${range[2]}`);
+    }
+
+    const digitsOnly = roomId.replace(/[^0-9]/g, '');
+    if (digitsOnly) variants.add(digitsOnly);
+
+    return Array.from(variants);
+}
+
+function isResolvedRoomMatch(resolvedSet, roomId) {
+    if (!(resolvedSet instanceof Set) || !roomId) return false;
+    return buildRoomIdVariants(roomId).some(id => resolvedSet.has(id));
+}
+
 function renderResolvedThumbs() {
-    const resolvedRoomIds = getLatestResolvedRoomIds();
+    if (activeFilters.size === 0) {
+        getRoomElements().forEach(room => {
+            room.querySelectorAll('.resolved-thumb').forEach(el => el.remove());
+        });
+        return;
+    }
+    const resolvedRoomIds = getLatestResolvedRoomIds(activeFilters);
     const rooms = getRoomElements();
     rooms.forEach(room => {
         room.querySelectorAll('.resolved-thumb').forEach(el => el.remove());
         const roomId = String(getRoomId(room) || '').trim();
-        if (!roomId || !resolvedRoomIds.has(roomId)) return;
-        room.insertAdjacentHTML('beforeend', '<div class="resolved-thumb" title="Resolved">👍</div>');
+        if (!roomId || !isResolvedRoomMatch(resolvedRoomIds, roomId)) return;
+        room.insertAdjacentHTML('beforeend', '<div class="resolved-thumb" title="Resolved">✅</div>');
     });
 }
 
 window.resolveMaintTaskFromDashboard = function(taskId) {
     if (!taskId) return;
-    if (selectedSnapshotDate !== getTodayLocal()) {
+    if (!isTodayEditableSelection()) {
         alert("View only (past date).");
         return;
     }
@@ -1020,27 +1196,23 @@ window.updateDashboardCharts = function() {
             const reportedDate = task.reported_date || task.reportedDate || '';
             const resolvedDate = task.resolved_date || task.resolvedDate || '';
             const status = task.status || 'pending';
-
-            // Rule 1: selectedSnapshotDate < reportedDate -> hide
-            if (selectedSnapshotDate < reportedDate) return;
-
             let displayState = null; // 'pending' | 'resolved'
-
-            if (status === 'pending') {
-                // Rule 2: pending shows from reportedDate to current date
-                if (selectedSnapshotDate >= reportedDate && selectedSnapshotDate <= todayISO) {
-                    displayState = 'pending';
+            if (isDateRangeMode()) {
+                displayState = getTaskStateInRange(task, selectedRangeStartDate, selectedRangeEndDate, todayISO);
+            } else {
+                // Rule 1: selectedSnapshotDate < reportedDate -> hide
+                if (selectedSnapshotDate < reportedDate) return;
+                if (status === 'pending') {
+                    if (selectedSnapshotDate >= reportedDate && selectedSnapshotDate <= todayISO) {
+                        displayState = 'pending';
+                    }
+                } else if (status === 'resolved') {
+                    if (selectedSnapshotDate === resolvedDate) {
+                        displayState = 'resolved';
+                    } else if (selectedSnapshotDate >= reportedDate && selectedSnapshotDate < resolvedDate) {
+                        displayState = 'pending';
+                    }
                 }
-            } else if (status === 'resolved') {
-                // Rule 3A: show resolved only on resolvedDate
-                if (selectedSnapshotDate === resolvedDate) {
-                    displayState = 'resolved';
-                }
-                // Rule 3B: between reportedDate and before resolvedDate => pending
-                else if (selectedSnapshotDate >= reportedDate && selectedSnapshotDate < resolvedDate) {
-                    displayState = 'pending';
-                }
-                // Rule 3C: selectedSnapshotDate > resolvedDate => hide
             }
 
             if (!displayState) return;
@@ -1052,6 +1224,7 @@ window.updateDashboardCharts = function() {
             const noteText = (task.note || '').trim() || '-';
             const canResolveFromDashboard = displayState === 'pending'
                 && status === 'pending'
+                && !isDateRangeMode()
                 && selectedSnapshotDate === todayISO
                 && !!task.id;
 
@@ -1092,11 +1265,11 @@ window.updateDashboardCharts = function() {
         // อัปเดตตัวเลขป้ายแดงๆ บนหัวการ์ด
         if (maintTaskCountBadge) {
             if (taskCount === 0) {
-                maintTaskCountBadge.className = "bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold";
+                maintTaskCountBadge.className = "bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center justify-center whitespace-nowrap leading-none";
                 maintTaskCountBadge.innerText = "✅ All Clear (ไม่มีงานค้าง)";
                 maintTableBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-400 font-medium">ไม่มีรายการแจ้งซ่อมในวันที่เลือก</td></tr>`;
             } else {
-                maintTaskCountBadge.className = "bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold";
+                maintTaskCountBadge.className = "bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center justify-center whitespace-nowrap leading-none";
                 maintTaskCountBadge.innerText = `${taskCount} Task(s)`;
             }
         }
@@ -1161,7 +1334,7 @@ function initImagePicker() {
 // 🔥 บันทึกข้อมูล (ทำงานกับ HTML ใหม่แน่นอน)
 window.saveCanvaItem = async function() {
     if (!currentViewingRoom) return;
-    if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
+    if (!isTodayEditableSelection()) { alert("View only (past date)."); return; }
  if (localStorage.getItem("isAdmin") !== "true") { alert("Admin only."); return; }
     const nameEl = el('item-name-input');
     const widthEl = el('item-width-input');
@@ -1227,7 +1400,7 @@ requestAnimationFrame(() => renderRoomInfoList(roomId));
 setTimeout(() => renderRoomInfoList(roomId), 0);
 }
 window.deleteInfoItem = function(roomId, index) {
-  if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
+  if (!isTodayEditableSelection()) { alert("View only (past date)."); return; }
   if (localStorage.getItem("isAdmin") !== "true") { alert("Admin only."); return; }
   if (!confirm("Confirm delete this item?")) return;
 
@@ -1361,24 +1534,34 @@ function applyActiveFiltersToRooms() {
         // remove only filter-related markers/icons, keep persisted maint-icon from DB
         room.querySelectorAll('.filter-icon').forEach(el => el.remove());
         room.querySelectorAll('.maint-icon.filter-maint-icon').forEach(el => el.remove());
+        // reset persisted maintenance icons visibility before applying filter
+        room.querySelectorAll('.maint-icon:not(.filter-maint-icon)').forEach(el => {
+            el.style.removeProperty('display');
+        });
     });
 
     if (activeFilters.size === 0) {
-        // No active filters: restore room colors/state from DB/local storage
-        // instead of leaving inline styles cleared.
         try { applySavedRoomStates(); } catch (e) {}
         try { applyRoomStatesFromDb(); } catch (e) {}
         return;
     }
 
-    // First, mark matches and non-matches (do not touch inline background-color)
     allRooms.forEach(room => {
         const rawMaint = room.getAttribute('data-maint') || "";
         const cleanMaint = rawMaint.trim();
         const isMatch = activeFilters.has(cleanMaint) || activeFilters.has(rawMaint);
+        if (!isMatch) {
+            // When a Service Status filter is active, hide non-matching persisted icons.
+            room.querySelectorAll('.maint-icon:not(.filter-maint-icon)').forEach(el => {
+                el.style.setProperty('display', 'none', 'important');
+            });
+            return;
+        }
+        room.querySelectorAll('.maint-icon:not(.filter-maint-icon)').forEach(el => {
+            el.style.setProperty('display', 'none', 'important');
+        });
         if (isMatch) {
             const icon = iconMap.get(cleanMaint) || iconMap.get(rawMaint) || "🔧";
-            // add filter icons/maint icons for matches only (do not dim or highlight)
             room.insertAdjacentHTML('beforeend', `<span class="filter-icon" aria-hidden="true">${icon}</span>`);
             const note = (room.getAttribute('data-maint-note') || '').trim();
             const label = note ? `Task: ${note}` : 'Task: Unspecified';
@@ -1449,16 +1632,107 @@ function populateMaintenanceDropdown() {
     });
 }
 
+function initMobileTopNavMenu() {
+    const toggleBtn = document.getElementById('topNavToggle');
+    const menu = document.getElementById('topNavMenu');
+    const header = document.querySelector('.page-navbar');
+    if (!toggleBtn || !menu || !header) return;
+
+    const mobileQuery = window.matchMedia('(max-width: 768px)');
+
+    const closeMenu = () => {
+        if (!mobileQuery.matches) return;
+        menu.classList.remove('is-open');
+        document.body.classList.remove('mobile-top-nav-open');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    const openMenu = () => {
+        if (!mobileQuery.matches) return;
+        document.body.classList.remove('mobile-service-drawer-open');
+        document.body.classList.remove('mobile-roomtype-drawer-open');
+        menu.classList.add('is-open');
+        document.body.classList.add('mobile-top-nav-open');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+    };
+
+    toggleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+        if (expanded) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!mobileQuery.matches) return;
+        const clickedInside = header.contains(event.target);
+        if (!clickedInside) closeMenu();
+    });
+
+    window.addEventListener('resize', () => {
+        if (!mobileQuery.matches) {
+            menu.classList.remove('is-open');
+            document.body.classList.remove('mobile-top-nav-open');
+            toggleBtn.setAttribute('aria-expanded', 'false');
+        } else {
+            closeMenu();
+        }
+    });
+}
+
+function initMobileSwipeToHome() {
+    const mobileQuery = window.matchMedia('(max-width: 768px)');
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    document.addEventListener('touchstart', (event) => {
+        if (!mobileQuery.matches) return;
+        const touch = event.changedTouches && event.changedTouches[0];
+        if (!touch) return;
+
+        // Trigger only when user starts swiping from left edge.
+        if (touch.clientX > 26) {
+            tracking = false;
+            return;
+        }
+        startX = touch.clientX;
+        startY = touch.clientY;
+        tracking = true;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (event) => {
+        if (!mobileQuery.matches || !tracking) return;
+        tracking = false;
+        const touch = event.changedTouches && event.changedTouches[0];
+        if (!touch) return;
+
+        const deltaX = touch.clientX - startX;
+        const deltaY = Math.abs(touch.clientY - startY);
+        if (deltaX >= 92 && deltaY <= 72) {
+            window.location.href = 'index.html';
+        }
+    }, { passive: true });
+}
+
 // --- Init ---
 document.addEventListener('DOMContentLoaded', async function() {
-    await syncAdminPasswordFromDb();
-    await syncItemCategoriesFromDb();
+    // Do not block first paint for Service Status.
+    syncAdminPasswordFromDb();
+    syncItemCategoriesFromDb().then(() => {
+        if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
+    });
     document.body.classList.remove('show-filter-icons');
     let isEditMode = false;
     const editModeBtn = document.getElementById('edit-mode-btn');
     const isAdminUser = () => localStorage.getItem("isAdmin") === "true";
     initImagePicker();
     initImageViewer();
+    initMobileTopNavMenu();
+    initMobileSwipeToHome();
     clearRoomTypeColors();
 
 
@@ -1472,7 +1746,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         if (editIcon) editIcon.innerText = "🔒";
         editModeBtn.onclick = function() {
-            if (selectedSnapshotDate !== getTodayLocal()) { alert("View only (past date)."); return; }
+            if (!isTodayEditableSelection()) { alert("View only (past date)."); return; }
             if (!isAdminUser()) { alert("Admin only."); return; }
             isEditMode = !isEditMode;
             if (editIcon) editIcon.innerText = isEditMode ? "🔓" : "🔒";
@@ -1504,23 +1778,15 @@ getRoomElements().forEach(el => {
             // 2. อัปเดตสถานะที่หน้าห้องทันที
             el.setAttribute('data-maint', newStatus);
 
-            // 3. วาดไอคอนหรือลบไอคอน (Real-time UI)
-            const existingBadges = el.querySelectorAll('.quick-badge-icon, .maint-badge');
-            existingBadges.forEach(badge => badge.remove()); // ล้างของเก่าออกก่อน
+            // 3. วาดไอคอนหรือลบไอคอน (Real-time UI) ด้วยสไตล์หลักของระบบ
+            const existingBadges = el.querySelectorAll('.quick-badge-icon, .maint-icon');
+            existingBadges.forEach(badge => badge.remove());
 
             if (newStatus !== '') {
-                // ไปดึงไอคอน Emoji (เช่น ❄️, ⚡) มาจากปุ่มบนแถบดำที่กำลังเลือกอยู่
-                const activeBtn = document.querySelector('.quick-tool-btn.bg-blue-600');
-                let iconText = '🔧'; 
-                if (activeBtn) {
-                    const span = activeBtn.querySelector('span');
-                    iconText = span ? span.innerText : activeBtn.innerText.trim().charAt(0);
-                }
-                // สร้างไอคอนวงกลม แปะไว้มุมขวาบนของห้อง
-                const iconDiv = document.createElement('div');
-                iconDiv.className = 'quick-badge-icon absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-red-500 rounded-full flex items-center justify-center shadow-lg text-[11px] z-50';
-                iconDiv.innerHTML = iconText;
-                el.appendChild(iconDiv);
+                const iconText = getMaintIcon(newStatus) || '🔧';
+                const noteText = String(el.getAttribute('data-maint-note') || '').trim();
+                const label = noteText ? `Task: ${noteText}` : 'Task: Unspecified';
+                el.insertAdjacentHTML('beforeend', `<div class="maint-icon" data-info="${label}">${iconText}</div>`);
             }
 
             // 4. แอบส่งข้อมูลไปเซฟใน Database หลังบ้าน (ไม่ต้องรอหน้าจอโหลด)
@@ -1530,29 +1796,30 @@ getRoomElements().forEach(el => {
                 guest_name: (el.getAttribute('data-name') || '').trim(),
                 room_type: el.getAttribute('data-type') || '',
                 maint_status: newStatus,
-                maint_note: newStatus ? 'Quick Update' : '', 
+                maint_note: newStatus ? String(el.getAttribute('data-maint-note') || '').trim() : '',
+                quick_toggle_remove: newStatus === '' ? 1 : 0,
                 ap_installed: el.getAttribute('data-ap') === 'true' ? 1 : 0,
                 ap_install_date: el.getAttribute('data-ap-date') || '',
                 room_image: getRoomImage(el)
             };
 
-            try {
-                await apiRequest('save_room_state', payload);
-                await loadMaintenanceTasksFromDb();
-                // สั่งซิงค์เงียบๆ เผื่ออัปเดต Service Status แถบซ้ายมือ
-                if (typeof window.applyRoomStatesFromDb === 'function') window.applyRoomStatesFromDb();
-                if (typeof window.renderServiceSidebar === 'function') window.renderServiceSidebar();
-            } catch (error) {
-                console.error('Save error:', error);
-            }
-            
+            quickSaveInFlight += 1;
+            apiRequest('save_room_state', payload)
+                .catch((error) => {
+                    console.error('Save error:', error);
+                })
+                .finally(() => {
+                    quickSaveInFlight = Math.max(0, quickSaveInFlight - 1);
+                    scheduleQuickSidebarSync();
+                });
+             
             return; // จบการทำงานโหมด Quick
         }
 
         // ==========================================
         // 🏠 โหมดการคลิกปกติ (ดูรายละเอียดห้อง)
         // ==========================================
-        if (typeof selectedSnapshotDate !== 'undefined' && selectedSnapshotDate !== getTodayLocal()) { 
+        if (typeof selectedSnapshotDate !== 'undefined' && !isTodayEditableSelection()) { 
             if (typeof openRoomInfoModal === 'function') openRoomInfoModal(el); 
             return; 
         }
@@ -1568,7 +1835,7 @@ const btnSave = document.getElementById('saveRoomInfo');
 if (btnSave) {
     btnSave.onclick = async function() {
         if (!currentEditingRoom) return;
-        if (selectedSnapshotDate !== getTodayLocal()) { 
+        if (!isTodayEditableSelection()) { 
             alert("View only (past date)."); 
             return; 
         }
@@ -1599,7 +1866,7 @@ if (btnSave) {
                            </div>`;
         }
 
-        if (maintStatus) {
+        if (maintStatus && (activeFilters.size > 0 || (typeof quickModeActive !== 'undefined' && quickModeActive))) {
             const icon = getMaintIcon(maintStatus) || '🔧';
             const note = maintNote ? `Task: ${maintNote}` : 'Task: Unspecified';
             badgesHtml += `<div class="maint-icon" data-info="${note}">
@@ -1755,7 +2022,7 @@ if (btnSave) {
                 const label = apDate ? `Installed: ${apDate}` : 'Installed: Unspecified';
                 badgesHtml += `<div class="ap-badge" data-info="${label}"><span class="ap-dot"></span></div>`;
             }
-            if (maintStatus) {
+            if (maintStatus && (activeFilters.size > 0 || (typeof quickModeActive !== 'undefined' && quickModeActive))) {
                 const icon = getMaintIcon(maintStatus) || '🔧';
                 const note = maintNote ? `Task: ${maintNote}` : 'Task: Unspecified';
                 badgesHtml += `<div class="maint-icon" data-info="${note}">${icon}</div>`;
@@ -1815,14 +2082,12 @@ async function applyRoomStatesFromDb() {
 
     document.addEventListener('date-selected', async (e) => {
         try {
-            const iso = e?.detail?.date || null;
-            if (!iso) return;
-            const d = new Date(iso);
-            d.setHours(0,0,0,0);
-            
-            // 🔥 บังคับ Format ให้เป็น YYYY-MM-DD เท่านั้น (สำคัญมาก)
-            selectedSnapshotDate = formatDateLocal(d);
-            localStorage.setItem(DATE_STORAGE_KEY, selectedSnapshotDate);
+            const startRaw = String(e?.detail?.start_date || e?.detail?.startDate || '').trim();
+            const endRaw = String(e?.detail?.end_date || e?.detail?.endDate || e?.detail?.date || '').trim();
+            if (!endRaw && !startRaw) return;
+            const startISO = (startRaw || endRaw).slice(0, 10);
+            const endISO = (endRaw || startRaw).slice(0, 10);
+            setSelectedDateRange(startISO, endISO);
 
             // โหลดข้อมูลห้องและสิ่งของจากฐานข้อมูลแบบ Real-time
             await applyRoomStatesFromDb();
@@ -1859,6 +2124,8 @@ async function applyRoomStatesFromDb() {
     }
 
     applySavedRoomStates();
+    // Fast first render from current cache while network requests are in-flight.
+    renderServiceSidebar();
         // Auto-assign data-room-id for rooms that don't have one yet.
         // This helps match displayed labels (e.g. "2101 Floor 2", "1103 - 1104")
         // to DB room_id values so colors persist after refresh.
@@ -1892,23 +2159,16 @@ async function applyRoomStatesFromDb() {
     // Ensure room elements have stable ids before requesting DB states
     autoAssignDataRoomId();
 
-    // Fetch DB states, then continue initialization that depends on those states
-    applyRoomStatesFromDb().then(async () => {
-       await loadRoomInfoMapFromDb();
-        await loadMaintenanceTasksFromDb();
+    // Fetch core data in parallel to reduce startup delay.
+    Promise.allSettled([
+        applyRoomStatesFromDb(),
+        loadRoomInfoMapFromDb(),
+        loadMaintenanceTasksFromDb()
+    ]).finally(() => {
         applyApBadges();
         renderServiceSidebar();
         initAdminButtonShared();
-         initAdminPasswordSettings();
-        initDashboardSummary();
-    }).catch(() => {
-        // on error still attempt to render sidebar and init
-        loadRoomInfoMapFromDb()
-        loadMaintenanceTasksFromDb();
-        applyApBadges();
-        renderServiceSidebar();
-        initAdminButtonShared();
-         initAdminPasswordSettings();
+        initAdminPasswordSettings();
         initDashboardSummary();
     });
 
@@ -1976,10 +2236,21 @@ async function applyRoomStatesFromDb() {
         }
 
         const isDesktop = window.matchMedia('(min-width: 1025px)').matches;
+        const isPhone = window.matchMedia('(max-width: 768px)').matches;
         const nav = document.querySelector('.page-navbar');
         const topOffset = (nav?.offsetHeight || 80) + 44;
+        const getPhoneDrawerTop = () => {
+            const navBottom = (nav?.getBoundingClientRect().bottom || (nav?.offsetHeight || 64)) + 8;
+            const serviceBtn = document.getElementById('mobileServiceDrawerToggle');
+            const roomTypeBtn = document.getElementById('mobileRoomTypeDrawerToggle');
+            const serviceBottom = serviceBtn ? (serviceBtn.getBoundingClientRect().bottom + 8) : navBottom;
+            const roomTypeBottom = roomTypeBtn ? (roomTypeBtn.getBoundingClientRect().bottom + 8) : navBottom;
+            return Math.max(navBottom, serviceBottom, roomTypeBottom);
+        };
 
         if (isDesktop) {
+            document.body.classList.remove('mobile-service-drawer-open');
+            document.body.classList.remove('mobile-roomtype-drawer-open');
             wrapper.style.setProperty('padding-left', '318px', 'important');
             wrapper.style.setProperty('padding-right', '286px', 'important');
 
@@ -1991,6 +2262,10 @@ async function applyRoomStatesFromDb() {
                 panel.style.setProperty('max-height', `calc(100vh - ${topOffset + 24}px)`, 'important');
                 panel.style.setProperty('overflow-y', 'auto', 'important');
                 panel.style.setProperty('z-index', '4000', 'important');
+                panel.style.setProperty('transform', 'none', 'important');
+                panel.style.setProperty('opacity', '1', 'important');
+                panel.style.setProperty('transition', 'none', 'important');
+                panel.style.setProperty('box-shadow', 'none', 'important');
             });
 
             if (leftPanel) {
@@ -2005,18 +2280,195 @@ async function applyRoomStatesFromDb() {
             wrapper.style.setProperty('padding-left', '12px', 'important');
             wrapper.style.setProperty('padding-right', '12px', 'important');
 
-            [leftPanel, rightPanel].forEach((panel) => {
-                if (!panel) return;
-                panel.style.setProperty('position', 'static', 'important');
-                panel.style.setProperty('top', 'auto', 'important');
-                panel.style.setProperty('left', 'auto', 'important');
-                panel.style.setProperty('right', 'auto', 'important');
-                panel.style.setProperty('width', 'min(100%, 560px)', 'important');
-                panel.style.setProperty('max-height', 'none', 'important');
-                panel.style.setProperty('overflow-y', 'visible', 'important');
-                panel.style.setProperty('margin', '0 auto 12px', 'important');
-            });
+            if (rightPanel) {
+                if (!isPhone) {
+                    rightPanel.style.setProperty('position', 'static', 'important');
+                    rightPanel.style.setProperty('top', 'auto', 'important');
+                    rightPanel.style.setProperty('left', 'auto', 'important');
+                    rightPanel.style.setProperty('right', 'auto', 'important');
+                    rightPanel.style.setProperty('width', 'min(100%, 560px)', 'important');
+                    rightPanel.style.setProperty('max-height', 'none', 'important');
+                    rightPanel.style.setProperty('overflow-y', 'visible', 'important');
+                    rightPanel.style.setProperty('margin', '0 auto 12px', 'important');
+                    rightPanel.style.setProperty('transform', 'none', 'important');
+                    rightPanel.style.setProperty('transition', 'none', 'important');
+                    rightPanel.style.setProperty('box-shadow', 'none', 'important');
+                } else {
+                    const openType = document.body.classList.contains('mobile-roomtype-drawer-open');
+                    const drawerTop = getPhoneDrawerTop();
+                    rightPanel.style.setProperty('position', 'fixed', 'important');
+                    rightPanel.style.setProperty('top', `${drawerTop}px`, 'important');
+                    rightPanel.style.setProperty('right', '8px', 'important');
+                    rightPanel.style.setProperty('left', 'auto', 'important');
+                    rightPanel.style.setProperty('width', 'min(88vw, 360px)', 'important');
+                    rightPanel.style.setProperty('max-height', `calc(100vh - ${drawerTop + 12}px)`, 'important');
+                    rightPanel.style.setProperty('overflow-y', 'auto', 'important');
+                    rightPanel.style.setProperty('margin', '0', 'important');
+                    rightPanel.style.setProperty('z-index', '4600', 'important');
+                    rightPanel.style.setProperty('box-shadow', '0 20px 40px rgba(15, 23, 42, 0.22)', 'important');
+                    rightPanel.style.setProperty('transition', 'transform .22s ease, opacity .22s ease', 'important');
+                    rightPanel.style.setProperty('transform', openType ? 'translateX(0)' : 'translateX(calc(100% + 16px))', 'important');
+                    rightPanel.style.setProperty('opacity', openType ? '1' : '0.96', 'important');
+                }
+            }
+
+            if (!leftPanel) return;
+            if (!isPhone) {
+                leftPanel.style.setProperty('position', 'static', 'important');
+                leftPanel.style.setProperty('top', 'auto', 'important');
+                leftPanel.style.setProperty('left', 'auto', 'important');
+                leftPanel.style.setProperty('right', 'auto', 'important');
+                leftPanel.style.setProperty('width', 'min(100%, 560px)', 'important');
+                leftPanel.style.setProperty('max-height', 'none', 'important');
+                leftPanel.style.setProperty('overflow-y', 'visible', 'important');
+                leftPanel.style.setProperty('margin', '0 auto 12px', 'important');
+                leftPanel.style.setProperty('transform', 'none', 'important');
+                leftPanel.style.setProperty('transition', 'none', 'important');
+                leftPanel.style.setProperty('box-shadow', 'none', 'important');
+                return;
+            }
+
+            const open = document.body.classList.contains('mobile-service-drawer-open');
+            const drawerTop = getPhoneDrawerTop();
+            leftPanel.style.setProperty('position', 'fixed', 'important');
+            leftPanel.style.setProperty('top', `${drawerTop}px`, 'important');
+            leftPanel.style.setProperty('left', '8px', 'important');
+            leftPanel.style.setProperty('right', 'auto', 'important');
+            leftPanel.style.setProperty('width', 'min(88vw, 360px)', 'important');
+            leftPanel.style.setProperty('max-height', `calc(100vh - ${drawerTop + 12}px)`, 'important');
+            leftPanel.style.setProperty('overflow-y', 'auto', 'important');
+            leftPanel.style.setProperty('margin', '0', 'important');
+            leftPanel.style.setProperty('z-index', '4600', 'important');
+            leftPanel.style.setProperty('box-shadow', '0 20px 40px rgba(15, 23, 42, 0.22)', 'important');
+            leftPanel.style.setProperty('transition', 'transform .22s ease, opacity .22s ease', 'important');
+            leftPanel.style.setProperty('transform', open ? 'translateX(0)' : 'translateX(calc(-100% - 16px))', 'important');
+            leftPanel.style.setProperty('opacity', open ? '1' : '0.96', 'important');
         }
+    }
+
+    function initMobileServiceDrawerControls() {
+        const leftPanel = document.querySelector('.legend-block.left-info-panel');
+        const rightPanel = document.querySelector('.legend-block.main-legend');
+        const nav = document.querySelector('.page-navbar');
+        if ((!leftPanel && !rightPanel) || !nav) return;
+
+        let toggleBtn = document.getElementById('mobileServiceDrawerToggle');
+        if (!toggleBtn) {
+            toggleBtn = document.createElement('button');
+            toggleBtn.id = 'mobileServiceDrawerToggle';
+            toggleBtn.type = 'button';
+            toggleBtn.textContent = 'Service Status';
+            document.body.appendChild(toggleBtn);
+        }
+
+        let backdrop = document.getElementById('mobileServiceDrawerBackdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'mobileServiceDrawerBackdrop';
+            document.body.appendChild(backdrop);
+        }
+
+        let roomTypeBtn = document.getElementById('mobileRoomTypeDrawerToggle');
+        if (!roomTypeBtn) {
+            roomTypeBtn = document.createElement('button');
+            roomTypeBtn.id = 'mobileRoomTypeDrawerToggle';
+            roomTypeBtn.type = 'button';
+            roomTypeBtn.textContent = 'Room Type';
+            document.body.appendChild(roomTypeBtn);
+        }
+
+        const phoneQuery = window.matchMedia('(max-width: 768px)');
+        const applyPhoneVisibility = () => {
+            if (!phoneQuery.matches) {
+                document.body.classList.remove('mobile-service-drawer-open');
+                document.body.classList.remove('mobile-roomtype-drawer-open');
+            }
+            window.requestAnimationFrame(enforceSidePanelsLayout);
+        };
+
+        toggleBtn.addEventListener('click', () => {
+            if (!phoneQuery.matches) return;
+            const isOpen = document.body.classList.contains('mobile-service-drawer-open');
+            document.body.classList.toggle('mobile-service-drawer-open', !isOpen);
+            if (!isOpen) document.body.classList.remove('mobile-roomtype-drawer-open');
+            window.requestAnimationFrame(enforceSidePanelsLayout);
+        });
+
+        roomTypeBtn.addEventListener('click', () => {
+            if (!phoneQuery.matches) return;
+            const isOpen = document.body.classList.contains('mobile-roomtype-drawer-open');
+            document.body.classList.toggle('mobile-roomtype-drawer-open', !isOpen);
+            if (!isOpen) document.body.classList.remove('mobile-service-drawer-open');
+            window.requestAnimationFrame(enforceSidePanelsLayout);
+        });
+
+        backdrop.addEventListener('click', () => {
+            document.body.classList.remove('mobile-service-drawer-open');
+            document.body.classList.remove('mobile-roomtype-drawer-open');
+            window.requestAnimationFrame(enforceSidePanelsLayout);
+        });
+
+        window.addEventListener('resize', applyPhoneVisibility);
+        applyPhoneVisibility();
+    }
+
+    let buildingAutoScale = 1;
+    let buildingUserScale = 1;
+    let pinchStartDistance = 0;
+    let pinchStartUserScale = 1;
+
+    function getTouchDistance(touches) {
+        if (!touches || touches.length < 2) return 0;
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.hypot(dx, dy);
+    }
+
+    function applyBuildingScale() {
+        const building = document.querySelector('.building-plan, .building');
+        const wrapper = document.querySelector('.plan-wrapper');
+        if (!building || !wrapper) return;
+        const finalScale = buildingAutoScale * buildingUserScale;
+        const planHeight = building.scrollHeight || building.getBoundingClientRect().height;
+        building.style.transform = `scale(${finalScale})`;
+        wrapper.style.minHeight = `${Math.ceil(planHeight * finalScale) + 24}px`;
+    }
+
+    function initMobilePinchZoom() {
+        const wrapper = document.querySelector('.plan-wrapper');
+        if (!wrapper) return;
+        const phoneQuery = window.matchMedia('(max-width: 768px)');
+
+        wrapper.addEventListener('touchstart', (event) => {
+            if (!phoneQuery.matches) return;
+            if (event.touches.length < 2) return;
+            pinchStartDistance = getTouchDistance(event.touches);
+            pinchStartUserScale = buildingUserScale;
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (event) => {
+            if (!phoneQuery.matches) return;
+            if (event.touches.length < 2 || pinchStartDistance <= 0) return;
+            const distance = getTouchDistance(event.touches);
+            if (!distance) return;
+
+            event.preventDefault();
+            const ratio = distance / pinchStartDistance;
+            buildingUserScale = Math.min(3, Math.max(0.7, pinchStartUserScale * ratio));
+            applyBuildingScale();
+        }, { passive: false });
+
+        wrapper.addEventListener('touchend', () => {
+            pinchStartDistance = 0;
+        }, { passive: true });
+    }
+
+    function centerBuildingOnPhone() {
+        const wrapper = document.querySelector('.plan-wrapper');
+        if (!wrapper) return;
+        if (!window.matchMedia('(max-width: 768px)').matches) return;
+        const maxScrollLeft = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth);
+        wrapper.scrollLeft = Math.round(maxScrollLeft / 2);
     }
 
     // Fit the whole plan section to current viewport width.
@@ -2037,11 +2489,20 @@ async function applyRoomStatesFromDb() {
         if (available <= 0 || !planWidth) return;
 
         const scale = Math.min(1, Math.max(0.35, available / planWidth));
-        building.style.transform = `scale(${scale})`;
-        wrapper.style.minHeight = `${Math.ceil(planHeight * scale) + 24}px`;
+        const isPhone = window.matchMedia('(max-width: 768px)').matches;
+        buildingAutoScale = scale;
+        if (!isPhone) {
+            buildingUserScale = 1;
+        }
+        applyBuildingScale();
+        if (isPhone) {
+            window.requestAnimationFrame(centerBuildingOnPhone);
+        }
     }
 
     hoistSidePanelsOutOfBuilding();
+    initMobileServiceDrawerControls();
+    initMobilePinchZoom();
     enforceSidePanelsLayout();
     scaleBuildingToFit();
     window.addEventListener('resize', () => {
@@ -2068,12 +2529,12 @@ function renderDateStrip() {
         const dateStr = formatDateLocal(d);
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'date-pill' + (dateStr === selectedSnapshotDate ? ' active' : '');
+        const inRange = dateStr >= selectedRangeStartDate && dateStr <= selectedRangeEndDate;
+        btn.className = 'date-pill' + (inRange ? ' active' : '');
         btn.textContent = String(d.getDate());
         btn.title = dateStr;
         btn.addEventListener('click', async () => {
-                selectedSnapshotDate = dateStr;
-                localStorage.setItem(DATE_STORAGE_KEY, selectedSnapshotDate);
+                setSelectedSingleDate(dateStr);
                 renderDateStrip();
                 if (typeof window.applyRoomStatesFromDb === 'function') {
                     await window.applyRoomStatesFromDb();
@@ -2094,10 +2555,18 @@ function renderDateStrip() {
     // ensure selected label shows
     const sel = document.getElementById('dateSelected');
     if (sel) {
-        const d = new Date(selectedSnapshotDate);
-        sel.textContent = isNaN(d.getTime())
-            ? selectedSnapshotDate
-            : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (isDateRangeMode()) {
+            const s = new Date(selectedRangeStartDate);
+            const e = new Date(selectedRangeEndDate);
+            const sTxt = isNaN(s.getTime()) ? selectedRangeStartDate : s.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const eTxt = isNaN(e.getTime()) ? selectedRangeEndDate : e.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            sel.textContent = `${sTxt} - ${eTxt}`;
+        } else {
+            const d = new Date(selectedSnapshotDate);
+            sel.textContent = isNaN(d.getTime())
+                ? selectedSnapshotDate
+                : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
     }
 
     // Create nav buttons behavior
@@ -2421,6 +2890,7 @@ window.enableQuickMode = function() {
     }
     const statusBar = document.getElementById('quick-status-bar');
     if (statusBar) statusBar.classList.remove('hidden');
+    document.body.classList.add('quick-update-mode-active');
     
     // สร้างปุ่มไอคอนตามหมวดหมู่ที่มีใน Settings
     const container = document.getElementById('quick-tool-options');
@@ -2453,6 +2923,11 @@ window.disableQuickMode = function() {
     selectedQuickStatus = '';
     const statusBar = document.getElementById('quick-status-bar');
     if (statusBar) statusBar.classList.add('hidden');
+    document.body.classList.remove('quick-update-mode-active');
+    document.querySelectorAll('.quick-badge-icon').forEach(el => el.remove());
+    if (activeFilters.size === 0) {
+        document.querySelectorAll('.room .maint-icon').forEach(el => el.remove());
+    }
 };
 // ฟังก์ชันสำหรับสวิตช์เปิด-ปิด Highlight Mode
 window.toggleHighlightMode = function(isActive) {
@@ -2474,13 +2949,16 @@ function applyHighlightEffect() {
     if (!document.body.classList.contains('highlight-mode-active')) return;
 
     const rooms = document.querySelectorAll('.room');
+    const resolvedRoomIds = activeFilters.size > 0 ? getLatestResolvedRoomIds(activeFilters) : new Set();
     rooms.forEach(room => {
         const roomMaint = (room.getAttribute('data-maint') || '').trim();
+        const roomId = String(getRoomId(room) || '').trim();
+        const isResolvedMatch = roomId ? isResolvedRoomMatch(resolvedRoomIds, roomId) : false;
         
         if (activeFilters.size === 0) {
             // ถ้าไม่ได้เลือกฟิลเตอร์อะไรเลย ให้แสดงผลปกติทุกห้อง
             room.classList.remove('is-dimmed-force', 'is-highlight-force');
-        } else if (activeFilters.has(roomMaint)) {
+        } else if (activeFilters.has(roomMaint) || isResolvedMatch) {
             // ถ้าห้องตรงกับสถานะที่เลือก ให้คงสภาพปกติ (ไม่เด้ง)
             room.classList.remove('is-dimmed-force');
             room.classList.remove('is-highlight-force');

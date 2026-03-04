@@ -5,7 +5,7 @@
   <title>Building A</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <link rel="stylesheet" href="css/style.css?v=20260226z">
+  <link rel="stylesheet" href="css/style.css?v=20260304m1">
   <script src="https://cdn.tailwindcss.com"></script>
   <style type="text/tailwindcss">
     @keyframes slideIn {
@@ -160,7 +160,7 @@
         font-size: 16px; opacity: 0; transform: scale(0); transition: all 0.2s; z-index: 10;
     }
 
-    /* CSS เน€เธเธเน€เธเธ“เน€เธเธเน€เธเธเน€เธเธ‘เน€เธย AP Date Input */
+   
     .checkbox-custom { width: 18px; height: 18px; cursor: pointer; accent-color: #2563eb; }
     .hidden { display: none; }
 
@@ -184,7 +184,7 @@
 
 .room.is-highlight-force {
     opacity: 1 !important;
-    filter: none !important; /* เน€เธยเน€เธเธ”เน€เธโ€เน€เธยเน€เธเธ’เน€เธเธเน€เธโ€”เน€เธเธ“ grayscale */
+    filter: none !important;
     transform: none !important;
     box-shadow: none !important;
 }
@@ -272,12 +272,21 @@
         </div>
         <div>
           <h1 class="text-sm font-extrabold text-slate-800 leading-none tracking-wide m-0">BUILDING A</h1>
-          <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase m-0">ABSC</span>
+          <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase m-0">ABSH</span>
         </div>
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-1.5">
+    <button id="topNavToggle" type="button" aria-expanded="false" aria-controls="topNavMenu" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-slate-300 bg-white text-slate-700 cursor-pointer">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4.5 w-4.5">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+      <span class="sr-only">Toggle menu</span>
+    </button>
+
+    <div id="topNavMenu" class="flex flex-wrap items-center gap-1.5">
       
       <button id="edit-mode-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border-none bg-transparent cursor-pointer text-slate-600 hover:text-slate-900">
         <span id="edit-icon">🔒</span>
@@ -317,7 +326,7 @@
         </svg>
         <span>BUILDING B</span>
       </a>
-</div>
+    </div>
     <button id="adminBtn" class="flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black uppercase tracking-wide transition-all duration-300 cursor-pointer border-2 border-slate-800 text-slate-800 hover:bg-slate-800 hover:text-white group">
       <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 transform group-hover:translate-x-1 transition-transform">
         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/>
@@ -482,7 +491,7 @@
     
     <div class="modal-content-box bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[90vh] overflow-hidden flex flex-col relative z-10">
         <div class="p-4 md:p-6 pb-0 bg-white">
-            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl">
+            <div class="room-info-hero bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-2">
@@ -492,12 +501,12 @@
                         <p class="text-white text-sm md:text-base opacity-90">Room <span id="infoRoomIdDisplay">#101</span> • <span id="itemCount">0</span> items</p>
                     </div>
                     
-                    <div class="flex gap-2">
-                        <button onclick="openAddItemModal()" class="btn-primary bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg cursor-pointer border-none">
+                    <div class="room-info-header-actions flex gap-2">
+                        <button onclick="openAddItemModal()" class="room-info-add-top btn-primary bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg cursor-pointer border-none">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg> 
                             Add Item
                         </button>
-                        <button onclick="closeInfoModal()" class="bg-white/20 hover:bg-white/30 text-white p-3 rounded-xl transition cursor-pointer border-none">
+                        <button onclick="closeInfoModal()" class="room-info-close-top bg-white/20 hover:bg-white/30 text-white p-3 rounded-xl transition cursor-pointer border-none">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
@@ -541,6 +550,9 @@
         </div>
         <button id="room-info-note-toggle-btn" onclick="toggleRoomInfoNotePanel()" class="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition cursor-pointer border-none text-base font-bold shadow-md z-30" title="Room Note">
             📌
+        </button>
+        <button id="room-info-add-fab" onclick="openAddItemModal()" class="absolute bottom-4 left-4 h-10 w-10 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 transition cursor-pointer border-none text-xl font-bold shadow-md z-30" title="Add Item">
+            +
         </button>
     </div>
 </div>
@@ -672,22 +684,22 @@ function toggleAPDate() {
 
     <div class="flex flex-1 min-h-0">
       
-      <div class="w-[200px] bg-slate-50 border-r border-slate-200 py-3 flex-shrink-0">
+      <div class="settings-tabs-sidebar w-[200px] bg-slate-50 border-r border-slate-200 py-3 flex-shrink-0">
         <button data-target="tab-room-types" class="settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-white text-slate-800 shadow-sm border-r-2 border-r-blue-500">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
-          Room Types
+          <span class="settings-tab-label">Room Types</span>
         </button>
         <button data-target="tab-maintenance" class="settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-transparent text-slate-500 hover:bg-white/60 hover:text-slate-700">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-          Maintenance
+          <span class="settings-tab-label">Maintenance</span>
         </button>
         <button data-target="tab-admin" class="settings-tab-btn w-full flex items-center gap-3 px-5 py-3 text-sm font-semibold text-left border-none cursor-pointer transition-all bg-transparent text-slate-500 hover:bg-white/60 hover:text-slate-700">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
-          Admin Password
+          <span class="settings-tab-label">Admin Password</span>
         </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-6 bg-white relative">
+      <div class="settings-tabs-content flex-1 overflow-y-auto p-6 bg-white relative">
         
         <div id="tab-room-types" class="settings-tab-content block">
             <h3 class="text-base font-extrabold text-slate-800 mb-1">Room Types</h3>
@@ -1215,7 +1227,7 @@ function refreshServiceSidebar() {
     syncFromDb(); 
 });
 </script>
-<script src="js/datepicker.js?v=20260226b"></script>
+<script src="js/datepicker.js?v=20260304r3"></script>
 <script>
     // Initialize the reusable DatePicker and wire the header button
     (function(){
@@ -1229,10 +1241,17 @@ function refreshServiceSidebar() {
                 const sel = document.getElementById('dateSelected');
                 const selectedDisplay = document.getElementById('selected-date');
                 const placeholder = document.getElementById('placeholder-text');
-                const selectedDate = e?.detail?.date ? new Date(e.detail.date) : null;
-                const englishDate = selectedDate && !isNaN(selectedDate.getTime())
-                    ? selectedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                    : (e?.detail?.formatted || '');
+                const startRaw = e?.detail?.start_date || e?.detail?.startDate || '';
+                const endRaw = e?.detail?.end_date || e?.detail?.endDate || e?.detail?.date || '';
+                const startDate = startRaw ? new Date(startRaw) : null;
+                const endDate = endRaw ? new Date(endRaw) : null;
+                const startTxt = startDate && !isNaN(startDate.getTime())
+                    ? startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                    : '';
+                const endTxt = endDate && !isNaN(endDate.getTime())
+                    ? endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                    : '';
+                const englishDate = (startTxt && endTxt) ? `${startTxt} - ${endTxt}` : (e?.detail?.formatted || '');
                 if (placeholder) placeholder.classList.add('hidden');
                 if (selectedDisplay) {
                     selectedDisplay.classList.remove('hidden');
@@ -1245,7 +1264,7 @@ function refreshServiceSidebar() {
         }
     })();
 </script>
-<script src="js/app.js?v=20260303a"></script>
+<script src="js/app.js?v=20260304m6"></script>
 </body>
 </html>
 

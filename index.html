@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="th" class="h-full">
 <head>
   <meta charset="UTF-8">
@@ -126,7 +126,7 @@
       background: #6d28d9;
     }
 
-    /* ================= 🔥 UPDATED LOGIN MODAL CSS 🔥 ================= */
+    /* ================= UPDATED LOGIN MODAL CSS ================= */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -222,6 +222,25 @@
         width: 68px;
         height: 68px;
       }
+
+      .modal-box {
+        width: calc(100vw - 24px);
+        padding: 22px 16px;
+      }
+
+      .guide-fab {
+        right: 12px;
+        bottom: 12px;
+        padding: 10px 14px;
+        font-size: 12px;
+      }
+
+      .guide-panel {
+        width: calc(100vw - 14px);
+        max-height: 92vh;
+        padding: 14px;
+        border-radius: 16px;
+      }
     }
 
     /* ================= QUICK GUIDE (RIGHT FLOAT BUTTON) ================= */
@@ -295,7 +314,11 @@
   <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
     
     <div class="flex items-center gap-4">
-      <img src="img/Hotel logo 2.png" alt="Logo" class="h-20 w-auto object-contain scale-110">
+      <div class="sm:hidden">
+        <h1 class="text-[10px] font-extrabold text-slate-800 tracking-tight leading-tight whitespace-nowrap">ANDAMAN BEACH SUITES HOTEL</h1>
+        <p class="text-[10px] text-slate-500 font-bold tracking-wide leading-tight mt-0.5">Room Status System</p>
+      </div>
+      <img src="img/Hotel logo 2.png" alt="Logo" class="hidden sm:block h-20 w-auto object-contain scale-110">
       <div class="hidden sm:block border-l-2 border-slate-300 pl-4 py-1">
         <h1 class="text-lg font-extrabold text-slate-800 tracking-tight leading-none">ANDAMAN BEACH SUITES HOTEL </h1>
         <p class="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-bold mt-1">Room Status System</p>
@@ -322,11 +345,8 @@
     </div>
 
     <div class="flex items-center">
-      <button id="adminBtn" class="flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-slate-800 text-slate-800 text-xs font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm">
+      <button id="adminBtn" class="flex items-center gap-2 px-5 py-2 rounded-full border-2 border-slate-800 text-slate-800 text-[11px] font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm">
         <span id="btnText">STAFF LOGIN</span>
-        <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-        </svg>
       </button>
     </div>
 
@@ -349,23 +369,23 @@
     <div class="building-card">
       <div class="building-icon building-a">A</div>
       <h3 class="text-2xl font-bold mb-2">ABSH</h3>
-      <p class="text-slate-500 mb-6">Building A • 104 Rooms</p>
+      <p class="text-slate-500 mb-6">Building A - 139 Rooms</p>
       <div class="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 mb-6">
-        <div class="flex justify-between"><span>Total Floors</span><span class="font-semibold text-slate-900">9 Floors</span></div>
-        <div class="flex justify-between"><span>Rooms/Floor</span><span class="font-semibold text-slate-900">8 Rooms</span></div>
+        <div class="flex justify-between"><span>Total Floors</span><span class="font-semibold text-slate-900">21 Floors</span></div>
+        <div class="flex justify-between"><span>Rooms</span><span class="font-semibold text-slate-900">139 Rooms</span></div>
       </div>
-      <a href="building-a.html" class="view-btn">View Floor Plan →</a>
+      <a href="building-a.html" class="view-btn">View Floor Plan -></a>
     </div>
 
     <div class="building-card">
       <div class="building-icon building-b">B</div>
       <h3 class="text-2xl font-bold mb-2">ABSC</h3>
-      <p class="text-slate-500 mb-6">Building B • 40 Rooms</p>
+      <p class="text-slate-500 mb-6">Building B - 36 Rooms</p>
       <div class="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 mb-6">
-        <div class="flex justify-between"><span>Total Floors</span><span class="font-semibold text-slate-900">4 Floors</span></div>
-        <div class="flex justify-between"><span>Rooms/Floor</span><span class="font-semibold text-slate-900">10 Rooms</span></div>
+        <div class="flex justify-between"><span>Total Floors</span><span class="font-semibold text-slate-900">5 Floors</span></div>
+        <div class="flex justify-between"><span>Rooms</span><span class="font-semibold text-slate-900">36 Rooms</span></div>
       </div>
-      <a href="building-b.html" class="view-btn">View Floor Plan →</a>
+      <a href="building-b.html" class="view-btn">View Floor Plan -></a>
     </div>
   </div>
 </section>
@@ -381,21 +401,21 @@
     <div class="flex items-center justify-between mb-3">
       <h3 class="text-xl font-bold text-slate-800">คู่มือการใช้งาน</h3>
       <button id="guideClose"
-        class="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 text-lg">×</button>
+        class="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 text-lg">&times;</button>
     </div>
 
     <!-- Image Area -->
     <div class="relative flex items-center justify-center">
 
       <button id="prevPage"
-        class="absolute left-0 bg-white/80 hover:bg-white rounded-full h-10 w-10 shadow flex items-center justify-center">‹</button>
+        class="absolute left-0 bg-white/80 hover:bg-white rounded-full h-10 w-10 shadow flex items-center justify-center">&lt;</button>
 
       <img id="guideImage"
         src="img/guide1.jpg"
         class="max-h-[80vh] w-full object-contain rounded-xl shadow-lg transition-all duration-300">
 
       <button id="nextPage"
-        class="absolute right-0 bg-white/80 hover:bg-white rounded-full h-10 w-10 shadow flex items-center justify-center">›</button>
+        class="absolute right-0 bg-white/80 hover:bg-white rounded-full h-10 w-10 shadow flex items-center justify-center">&gt;</button>
 
     </div>
 
@@ -433,258 +453,236 @@
   User Guide
 </button>
 <script>
+(() => {
   // --- 1. Real-time Clock ---
   function updateClock() {
     const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeStr = now.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
     const timeElement = document.getElementById('liveTime');
-    if(timeElement) timeElement.textContent = timeStr;
+    if (timeElement) timeElement.textContent = timeStr;
   }
-  setInterval(updateClock, 1000);
   updateClock();
+  window.setInterval(updateClock, 1000);
 
-  // --- 2. Hero Slider Logic ---
+  // --- 2. Hero Slider Logic (guarded + pause on hidden tab) ---
   let currentIndex = 0;
-  const totalSlides = 3;
-  const sliderTrack = document.getElementById("sliderTrack");
+  const sliderTrack = document.getElementById('sliderTrack');
+  const slideCount = sliderTrack ? sliderTrack.querySelectorAll('.slide').length : 0;
+  let sliderTimer = null;
 
   function slideToNext() {
-    currentIndex = (currentIndex + 1) % totalSlides;
-    const offset = currentIndex * (100 / totalSlides);
+    if (!sliderTrack || slideCount <= 1) return;
+    currentIndex = (currentIndex + 1) % slideCount;
+    const offset = currentIndex * (100 / slideCount);
     sliderTrack.style.transform = `translateX(-${offset}%)`;
   }
-  setInterval(slideToNext, 3000);
+  function startSlider() {
+    if (sliderTimer || !sliderTrack || slideCount <= 1) return;
+    sliderTimer = window.setInterval(slideToNext, 3500);
+  }
+  function stopSlider() {
+    if (!sliderTimer) return;
+    window.clearInterval(sliderTimer);
+    sliderTimer = null;
+  }
+  if (sliderTrack && slideCount > 1) {
+    startSlider();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopSlider();
+      else startSlider();
+    });
+  }
 
-  // --- 3. Admin & Modal Logic (With Green Button) ---
-  const adminBtn = document.getElementById("adminBtn");
-  const btnText = document.getElementById("btnText");
-  const modal = document.getElementById("adminModal");
-  const passInput = document.getElementById("adminPassword");
-  const loginBtn = document.getElementById("loginConfirm");
-  const cancelBtn = document.getElementById("loginCancel");
+  // --- 3. Admin & Modal Logic ---
+  const adminBtn = document.getElementById('adminBtn');
+  const btnText = document.getElementById('btnText');
+  const modal = document.getElementById('adminModal');
+  const passInput = document.getElementById('adminPassword');
+  const loginBtn = document.getElementById('loginConfirm');
+  const cancelBtn = document.getElementById('loginCancel');
+  const ADMIN_PASSWORD_STORAGE_KEY = 'admin_password_v1';
+  const DEFAULT_ADMIN_PASSWORD = '1234';
 
-const ADMIN_PASSWORD_STORAGE_KEY = "admin_password_v1";
-  const DEFAULT_ADMIN_PASSWORD = "1234";
-
-  // 🔥 1. เพิ่มฟังก์ชันเชื่อมต่อ API (api.php) 🔥
   async function apiRequest(action, payload = {}) {
-      try {
-          const res = await fetch('api.php', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action, ...payload })
-          });
-          const data = await res.json();
-          if (!data || data.ok !== true) throw new Error(data.error || 'API error');
-          return data;
-      } catch (err) {
-          console.warn('API request failed:', err);
-          return null;
-      }
+    try {
+      const res = await fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const data = await res.json();
+      if (!data || data.ok !== true) throw new Error(data.error || 'API error');
+      return data;
+    } catch (err) {
+      console.warn('API request failed:', err);
+      return null;
+    }
   }
 
-  // 🔥 2. เพิ่มฟังก์ชันดึงรหัสจากฐานข้อมูล 🔥
   async function syncAdminPasswordFromDb() {
-      const res = await apiRequest('get_admin_password');
-      if (res && res.password) {
-          const password = String(res.password).trim();
-          if (password.length >= 4) {
-              localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, password);
-          }
-      }
+    const res = await apiRequest('get_admin_password');
+    if (res && res.password) {
+      const password = String(res.password).trim();
+      if (password.length >= 4) localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, password);
+    }
   }
 
   function getAdminPassword() {
-      const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "").trim();
-      return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
+    const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || '').trim();
+    return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
   }
-  function getAdminPassword() {
-      const saved = String(localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "").trim();
-      return saved.length >= 4 ? saved : DEFAULT_ADMIN_PASSWORD;
+
+  function setAdminState() {
+    if (!adminBtn || !btnText) return;
+    btnText.textContent = 'ADMIN ACTIVE';
+    adminBtn.className = 'flex items-center gap-2 px-5 py-2 rounded-full bg-green-600 border-2 border-green-600 text-white text-[11px] font-black hover:bg-green-700 transition-all duration-300 group shadow-sm';
+    const icon = document.getElementById('btnIcon');
+    if (icon) {
+      icon.style.display = 'none';
+    }
+  }
+
+  function setGuestState() {
+    if (!adminBtn || !btnText) return;
+    btnText.textContent = 'STAFF LOGIN';
+    adminBtn.className = 'flex items-center gap-2 px-5 py-2 rounded-full border-2 border-slate-800 text-slate-800 text-[11px] font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm';
+    const icon = document.getElementById('btnIcon');
+    if (icon) {
+      icon.style.display = 'none';
+    }
   }
 
   function checkLoginStatus() {
-      if (localStorage.getItem("isAdmin") === "true") {
-          setAdminState();
-      }
+    if (localStorage.getItem('isAdmin') === 'true') setAdminState();
+    else setGuestState();
   }
 
-  // 🔥 สถานะ Admin: ปุ่มสีเขียว 🔥
-  function setAdminState() {
-      btnText.textContent = "ADMIN ACTIVE";
-      // เปลี่ยน Class เป็นสีเขียว (bg-green-600, border-green-600)
-      adminBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-full bg-green-600 border-2 border-green-600 text-white text-xs font-black hover:bg-green-700 transition-all duration-300 group shadow-sm";
-      
-      // เปลี่ยน icon เป็นติ๊กถูก หรือ Login ค้างไว้ (Optional)
-      const icon = document.getElementById("btnIcon");
-      if(icon) {
-          icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
-          icon.classList.remove("group-hover:translate-x-1"); // หยุดขยับ
-      }
-  }
-
-  // 🔥 สถานะ Guest: ปุ่มขาวขอบดำเดิม 🔥
-  function setGuestState() {
-      btnText.textContent = "STAFF LOGIN";
-      // คืนค่า Class เดิม
-      adminBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-slate-800 text-slate-800 text-xs font-black hover:bg-slate-800 hover:text-white transition-all duration-300 group shadow-sm";
-      
-      // คืนค่า icon ลูกศร
-      const icon = document.getElementById("btnIcon");
-      if(icon) {
-          icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />';
-          icon.classList.add("group-hover:translate-x-1");
-      }
-  }
-
-  adminBtn.addEventListener("click", () => {
-    if (localStorage.getItem("isAdmin") === "true") {
-        if(confirm("Log out of Admin?")) {
-            localStorage.removeItem("isAdmin");
-            setGuestState();
+  if (adminBtn && modal && passInput && loginBtn && cancelBtn) {
+    adminBtn.addEventListener('click', () => {
+      if (localStorage.getItem('isAdmin') === 'true') {
+        if (confirm('Log out of Admin?')) {
+          localStorage.removeItem('isAdmin');
+          setGuestState();
         }
-    } else {
-        modal.classList.remove("hidden");
-        passInput.value = "";
+      } else {
+        modal.classList.remove('hidden');
+        passInput.value = '';
         passInput.focus();
-    }
-  });
+      }
+    });
 
- // ฟังก์ชันเช็ค Login ในหน้า index.html
-
-loginBtn.addEventListener("click", async () => {
-
-    const inputPass = passInput.value;
-
-    
-
-    // 1. ดึงรหัสล่าสุดจากฐานข้อมูลก่อนเช็ค
-
-    await syncAdminPasswordFromDb(); 
-
-    const correctPass = getAdminPassword();
-
-
-
-    if (inputPass === correctPass) {
-
-        localStorage.setItem("isAdmin", "true");
-
+    loginBtn.addEventListener('click', async () => {
+      const inputPass = passInput.value;
+      await syncAdminPasswordFromDb();
+      const correctPass = getAdminPassword();
+      if (inputPass === correctPass) {
+        localStorage.setItem('isAdmin', 'true');
         setAdminState();
+        modal.classList.add('hidden');
+        alert('Admin mode enabled');
+      } else {
+        alert('Incorrect password');
+      }
+    });
 
-        modal.classList.add("hidden");
+    passInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loginBtn.click();
+    });
 
-        alert("Admin mode enabled ✅");
+    cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.add('hidden');
+    });
 
-    } else {
-
-        alert("Incorrect password❌");
-
-    }
-
-});
-  passInput.addEventListener("keypress", (e) => {
-      if(e.key === "Enter") loginBtn.click();
-  });
-
-  cancelBtn.addEventListener("click", () => modal.classList.add("hidden"));
-  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
-
-  if (localStorage.getItem("showLoginModal") === "true") {
-      localStorage.removeItem("showLoginModal");
-      modal.classList.remove("hidden");
-      passInput.value = "";
+    if (localStorage.getItem('showLoginModal') === 'true') {
+      localStorage.removeItem('showLoginModal');
+      modal.classList.remove('hidden');
+      passInput.value = '';
       passInput.focus();
+    }
   }
 
-  window.addEventListener("storage", (e) => {
-      if (e.key === "isAdmin") checkLoginStatus();
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'isAdmin') checkLoginStatus();
   });
 
-  // --- 4. Quick Guide Button (Right Side) ---
-  const guideFab = document.getElementById("guideFab");
-  const guideModal = document.getElementById("guideModal");
-  const guideClose = document.getElementById("guideClose");
+  // --- 4. Quick Guide Viewer ---
+  const guideFab = document.getElementById('guideFab');
+  const guideModal = document.getElementById('guideModal');
+  const guideClose = document.getElementById('guideClose');
+  const guideImages = [
+    'img/guide1.jpg',
+    'img/guide2.jpg',
+    'img/guide3.jpg',
+    'img/guide4.jpg',
+    'img/guide5.jpg',
+    'img/guide6.jpg',
+    'img/guide7.jpg'
+  ];
+  let currentGuidePage = 0;
+  const guideImage = document.getElementById('guideImage');
+  const currentPageEl = document.getElementById('currentPage');
+  const totalPagesEl = document.getElementById('totalPages');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+
+  function updateGuideImage() {
+    if (!guideImage || !currentPageEl) return;
+    guideImage.src = guideImages[currentGuidePage];
+    currentPageEl.textContent = String(currentGuidePage + 1);
+  }
+  function nextPage() {
+    if (currentGuidePage < guideImages.length - 1) {
+      currentGuidePage += 1;
+      updateGuideImage();
+    }
+  }
+  function prevPage() {
+    if (currentGuidePage > 0) {
+      currentGuidePage -= 1;
+      updateGuideImage();
+    }
+  }
+
+  if (totalPagesEl) totalPagesEl.textContent = String(guideImages.length);
+  if (nextBtn) nextBtn.addEventListener('click', nextPage);
+  if (prevBtn) prevBtn.addEventListener('click', prevPage);
 
   if (guideFab && guideModal) {
-    guideFab.addEventListener("click", () => guideModal.classList.remove("hidden"));
-    if (guideClose) guideClose.addEventListener("click", () => guideModal.classList.add("hidden"));
-    guideModal.addEventListener("click", (e) => {
-      if (e.target === guideModal) guideModal.classList.add("hidden");
+    guideFab.addEventListener('click', () => guideModal.classList.remove('hidden'));
+    if (guideClose) guideClose.addEventListener('click', () => guideModal.classList.add('hidden'));
+    guideModal.addEventListener('click', (e) => {
+      if (e.target === guideModal) guideModal.classList.add('hidden');
     });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") guideModal.classList.add("hidden");
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (!guideModal || guideModal.classList.contains('hidden')) return;
+    if (e.key === 'Escape') guideModal.classList.add('hidden');
+    if (e.key === 'ArrowRight') nextPage();
+    if (e.key === 'ArrowLeft') prevPage();
+  });
+
+  let startX = 0;
+  if (guideImage) {
+    guideImage.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+    });
+    guideImage.addEventListener('touchend', (e) => {
+      const diff = e.changedTouches[0].clientX - startX;
+      if (diff > 50) prevPage();
+      if (diff < -50) nextPage();
     });
   }
 
   checkLoginStatus();
-  // ===== Guide Pro Viewer =====
-const guideImages = [
-  "img/guide1.jpg",
-  "img/guide2.jpg",
-  "img/guide3.jpg",
-  "img/guide4.jpg",
-  "img/guide5.jpg",
-  "img/guide6.jpg",
-  "img/guide7.jpg"
-];
-
-let currentGuidePage = 0;
-
-const guideImage = document.getElementById("guideImage");
-const currentPageEl = document.getElementById("currentPage");
-const totalPagesEl = document.getElementById("totalPages");
-const prevBtn = document.getElementById("prevPage");
-const nextBtn = document.getElementById("nextPage");
-
-if (totalPagesEl) totalPagesEl.textContent = guideImages.length;
-
-function updateGuideImage() {
-  guideImage.src = guideImages[currentGuidePage];
-  currentPageEl.textContent = currentGuidePage + 1;
-}
-
-function nextPage() {
-  if (currentGuidePage < guideImages.length - 1) {
-    currentGuidePage++;
-    updateGuideImage();
-  }
-}
-
-function prevPage() {
-  if (currentGuidePage > 0) {
-    currentGuidePage--;
-    updateGuideImage();
-  }
-}
-
-if (nextBtn) nextBtn.addEventListener("click", nextPage);
-if (prevBtn) prevBtn.addEventListener("click", prevPage);
-
-// Keyboard support
-document.addEventListener("keydown", (e) => {
-  if (!guideModal.classList.contains("hidden")) {
-    if (e.key === "ArrowRight") nextPage();
-    if (e.key === "ArrowLeft") prevPage();
-  }
-});
-
-// Mobile swipe
-let startX = 0;
-guideImage?.addEventListener("touchstart", (e) => {
-  startX = e.touches[0].clientX;
-});
-
-guideImage?.addEventListener("touchend", (e) => {
-  let diff = e.changedTouches[0].clientX - startX;
-  if (diff > 50) prevPage();
-  if (diff < -50) nextPage();
-});
-checkLoginStatus();
-  syncAdminPasswordFromDb(); // 🔥 4. เพิ่มคำสั่งนี้ให้โหลดรหัสใหม่ทุกครั้งที่เปิดหน้าเว็บ
-
-updateGuideImage();
-
+  syncAdminPasswordFromDb();
+  updateGuideImage();
+})();
 </script>
 
 </body>

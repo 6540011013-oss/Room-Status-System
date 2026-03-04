@@ -4,6 +4,8 @@
     this.container = null;
     this.currentMonth = new Date();
     this.selectedDate = null;
+    this.startDate = null;
+    this.endDate = null;
     this._build();
   }
 
@@ -14,12 +16,11 @@
       <div class="absolute inset-0 bg-black/40" data-role="backdrop"></div>
       <div class="relative w-full max-w-md p-6">
         <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white font-semibold text-center">📅 เลือกวันที่ (ไม่จำกัดย้อนหลัง)</div>
+          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white font-semibold text-center">📅 เลือกช่วงวันที่</div>
           <div class="p-6">
-            <p class="text-xs text-gray-500 text-center mb-4">เลือกได้วันนี้และย้อนหลังได้ทั้งหมด</p>
             <div id="dp-selected-display" class="bg-gray-50 rounded-2xl p-5 text-center border-2 border-dashed border-gray-200 transition-all duration-300 mb-4">
-              <p id="dp-placeholder" class="text-gray-400 text-lg">กรุณาเลือกวันที่</p>
-              <p id="dp-selected" class="text-2xl font-semibold text-indigo-600 hidden"></p>
+              <p id="dp-placeholder" class="text-gray-400 text-lg">กรุณาเลือกวันเริ่มและวันสิ้นสุด</p>
+              <p id="dp-selected" class="text-base font-semibold text-indigo-600 hidden"></p>
             </div>
             <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
               <div class="flex items-center justify-between mb-3">
@@ -37,14 +38,23 @@
             </div>
           </div>
           <div class="px-6 py-4">
-            <button data-role="toggle" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-2xl">เลือกวันที่</button>
+            <button data-role="toggle" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-2xl">ปิด</button>
           </div>
         </div>
       </div>`;
 
     wrap.querySelector('[data-role="backdrop"]').addEventListener('click', () => this.close());
     wrap.querySelector('[data-role="toggle"]').addEventListener('click', () => this.close());
-    wrap.querySelector('[data-role="goto-today"]').addEventListener('click', () => { this._selectDate(new Date()); });
+    wrap.querySelector('[data-role="goto-today"]').addEventListener('click', () => {
+      const t = new Date();
+      t.setHours(0, 0, 0, 0);
+      this.startDate = new Date(t.getTime());
+      this.endDate = new Date(t.getTime());
+      this.selectedDate = new Date(t.getTime());
+      this._emitSelection();
+      this.renderCalendar();
+      setTimeout(() => this.close(), 160);
+    });
     wrap.querySelector('[data-role="prev"]').addEventListener('click', () => {
       this.currentMonth.setMonth(this.currentMonth.getMonth() - 1);
       this.renderCalendar();
@@ -67,6 +77,13 @@
     const year = date.getFullYear() + 543;
     const weekday = thaiDays[date.getDay()];
     return `วัน${weekday}ที่ ${day} ${month} ${year}`;
+  }
+
+  _formatISODateLocal(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   isInRange(date) {
@@ -110,10 +127,20 @@
       el.className = 'aspect-square flex items-center justify-center text-sm rounded-xl cursor-pointer transition-colors';
       const disabled = !this.isInRange(date);
 
+      const isStart = this.startDate && date.getTime() === this.startDate.getTime();
+      const isEnd = this.endDate && date.getTime() === this.endDate.getTime();
+      const inSelectedRange = this.startDate && this.endDate
+        && date.getTime() >= this.startDate.getTime()
+        && date.getTime() <= this.endDate.getTime();
+
       if (disabled) {
         el.classList.add('text-gray-300');
-      } else if (this.selectedDate && date.getTime() === this.selectedDate.getTime()) {
+      } else if (isEnd) {
         el.classList.add('bg-gradient-to-r', 'from-indigo-500', 'to-purple-600', 'text-white', 'font-semibold', 'shadow-md');
+      } else if (isStart) {
+        el.classList.add('bg-gradient-to-r', 'from-rose-400', 'to-pink-500', 'text-white', 'font-semibold', 'shadow-md');
+      } else if (inSelectedRange) {
+        el.classList.add('bg-indigo-50', 'text-indigo-700', 'font-semibold');
       } else if (date.getTime() === today.getTime()) {
         el.classList.add('bg-indigo-50', 'text-indigo-600', 'font-semibold', 'ring-2', 'ring-indigo-200');
       } else {
@@ -121,9 +148,7 @@
       }
 
       el.textContent = d;
-      if (!disabled) {
-        el.addEventListener('click', () => this._selectDate(date));
-      }
+      if (!disabled) el.addEventListener('click', () => this._selectDate(date));
       daysEl.appendChild(el);
     }
 
@@ -136,10 +161,14 @@
       daysEl.appendChild(div);
     }
 
-    if (this.selectedDate) {
+    if (this.startDate) {
       placeholder.classList.add('hidden');
       selectedEl.classList.remove('hidden');
-      selectedEl.textContent = this._formatThaiDate(this.selectedDate);
+      if (this.endDate) {
+        selectedEl.textContent = `${this._formatThaiDate(this.startDate)} - ${this._formatThaiDate(this.endDate)}`;
+      } else {
+        selectedEl.textContent = `เริ่ม: ${this._formatThaiDate(this.startDate)}`;
+      }
     } else {
       placeholder.classList.remove('hidden');
       selectedEl.classList.add('hidden');
@@ -147,18 +176,47 @@
   }
 
   _selectDate(date) {
-    const iso = new Date(date.getTime());
-    iso.setHours(0, 0, 0, 0);
-    this.selectedDate = iso;
+    const picked = new Date(date.getTime());
+    picked.setHours(0, 0, 0, 0);
+    this.selectedDate = picked;
 
-    const detail = {
-      date: iso.toISOString(),
-      formatted: this._formatThaiDate(iso)
-    };
-    document.dispatchEvent(new CustomEvent('date-selected', { detail }));
+    if (!this.startDate || (this.startDate && this.endDate)) {
+      this.startDate = new Date(picked.getTime());
+      this.endDate = null;
+      this.renderCalendar();
+      return;
+    }
+
+    if (!this.endDate) {
+      if (picked.getTime() < this.startDate.getTime()) {
+        this.endDate = new Date(this.startDate.getTime());
+        this.startDate = new Date(picked.getTime());
+      } else {
+        this.endDate = new Date(picked.getTime());
+      }
+      this._emitSelection();
+    }
 
     this.renderCalendar();
-    setTimeout(() => this.close(), 220);
+    if (this.startDate && this.endDate) {
+      setTimeout(() => this.close(), 220);
+    }
+  }
+
+  _emitSelection() {
+    if (!this.startDate) return;
+    const start = new Date(this.startDate.getTime());
+    start.setHours(0, 0, 0, 0);
+    const end = this.endDate ? new Date(this.endDate.getTime()) : new Date(start.getTime());
+    end.setHours(0, 0, 0, 0);
+
+    const detail = {
+      date: this._formatISODateLocal(end),
+      start_date: this._formatISODateLocal(start),
+      end_date: this._formatISODateLocal(end),
+      formatted: `${this._formatThaiDate(start)} - ${this._formatThaiDate(end)}`
+    };
+    document.dispatchEvent(new CustomEvent('date-selected', { detail }));
   }
 
   open() {

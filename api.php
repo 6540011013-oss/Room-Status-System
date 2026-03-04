@@ -412,6 +412,7 @@ switch ($action) {
         $roomNote = trim((string)($input['room_note'] ?? $_REQUEST['room_note'] ?? ''));
         $maintStatus = trim((string)($input['maint_status'] ?? $_REQUEST['maint_status'] ?? ''));
         $maintNote = trim((string)($input['maint_note'] ?? $_REQUEST['maint_note'] ?? ''));
+        $quickToggleRemove = (int)($input['quick_toggle_remove'] ?? $_REQUEST['quick_toggle_remove'] ?? 0);
         $apInstalled = (int)($input['ap_installed'] ?? $_REQUEST['ap_installed'] ?? 0);
         $apDate = trim((string)($input['ap_install_date'] ?? $_REQUEST['ap_install_date'] ?? ''));
         $bedBadge = trim((string)($input['bed_badge'] ?? $_REQUEST['bed_badge'] ?? ''));
@@ -463,12 +464,21 @@ switch ($action) {
                 $insPending->execute([$building, $roomId, $maintStatus, $maintNote]);
             }
         } else {
-            $resolvePending = $pdo->prepare("
-                UPDATE maintenance_tasks
-                SET status = 'resolved', resolved_date = CURDATE(), updated_at = CURRENT_TIMESTAMP
-                WHERE building = ? AND room_id = ? AND status = 'pending'
-            ");
-            $resolvePending->execute([$building, $roomId]);
+            if ($quickToggleRemove === 1) {
+                // QUICK UPDATE คลิกซ้ำ = ยกเลิกรายการ ไม่ถือว่า "ซ่อมเสร็จ"
+                $deletePending = $pdo->prepare("
+                    DELETE FROM maintenance_tasks
+                    WHERE building = ? AND room_id = ? AND status = 'pending'
+                ");
+                $deletePending->execute([$building, $roomId]);
+            } else {
+                $resolvePending = $pdo->prepare("
+                    UPDATE maintenance_tasks
+                    SET status = 'resolved', resolved_date = CURDATE(), updated_at = CURRENT_TIMESTAMP
+                    WHERE building = ? AND room_id = ? AND status = 'pending'
+                ");
+                $resolvePending->execute([$building, $roomId]);
+            }
         }
         json_ok();
     }

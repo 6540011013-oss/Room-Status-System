@@ -3547,3 +3547,355 @@ body > .page-navbar:first-of-type {
     margin-top: 0 !important;
     top: 0 !important;
 }
+
+/* ===============================
+   Mobile Final Overrides
+   =============================== */
+@media (min-width: 769px) {
+    #topNavToggle {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-navbar > div {
+        display: grid !important;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+            "toggle brand admin"
+            "menu menu menu";
+        padding: 8px 10px !important;
+        gap: 8px !important;
+        align-items: center !important;
+    }
+
+    .page-navbar > div > .flex.items-center.gap-4 {
+        grid-area: brand;
+        width: 100%;
+        min-width: 0;
+        gap: 0 !important;
+        justify-content: flex-start !important;
+    }
+
+    .page-navbar > div > .flex.items-center.gap-4 > a[href="index.html"],
+    .page-navbar > div > .flex.items-center.gap-4 > .h-6.w-px.bg-slate-300 {
+        display: none !important;
+    }
+
+    .page-navbar > div > .flex.items-center.gap-4 > .flex.items-center.gap-3 {
+        width: 100%;
+        justify-content: flex-start !important;
+    }
+
+    .page-navbar > div > .flex.items-center.gap-4 > .flex.items-center.gap-3 > div:first-child {
+        display: none !important;
+    }
+
+    #topNavToggle {
+        grid-area: toggle;
+        margin-left: 0;
+        flex: 0 0 auto;
+        justify-self: start;
+        align-self: center;
+    }
+
+    #topNavMenu {
+        grid-area: menu;
+        display: none !important;
+        width: 100%;
+        order: 3;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+
+    #topNavMenu.is-open {
+        display: flex !important;
+    }
+
+    #topNavMenu > * {
+        width: 100%;
+        justify-content: flex-start !important;
+    }
+
+    #topNavMenu .h-6.w-px.bg-slate-300.mx-1 {
+        display: none;
+    }
+
+    #adminBtn {
+        grid-area: admin;
+        width: auto !important;
+        min-width: 126px !important;
+        height: 38px !important;
+        padding: 0 14px !important;
+        border-radius: 9999px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        justify-self: end;
+        margin: 0 !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        letter-spacing: 0.02em;
+    }
+
+    #adminBtn #btnIcon {
+        display: none !important;
+    }
+
+    #adminBtn #btnText {
+        display: inline !important;
+    }
+
+    #quick-status-bar {
+        top: 0 !important;
+    }
+
+    .plan-wrapper {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        margin-left: 0 !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        justify-content: center !important;
+    }
+
+    .building-plan,
+    .building,
+    .building-b-container {
+        min-width: max-content;
+    }
+
+    .legend-block,
+    .legend-block.left-info-panel,
+    .legend-block.main-legend {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 0 10px 0 !important;
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        max-height: none !important;
+    }
+
+    .modal-overlay {
+        padding: 8px !important;
+    }
+
+    .modal-box,
+    .modal-content-box {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #roomEditModal > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: calc(100vh - 16px) !important;
+        overflow-y: auto !important;
+    }
+
+    #admin-modal-canva > .relative {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: calc(100vh - 16px) !important;
+    }
+
+    #dashboardModal .dashboard-modal__panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+    }
+
+    #dashboardModal #dashboardPrint {
+        display: none !important;
+    }
+
+    #dashboardModal .dashboard-modal__header {
+        position: relative;
+        padding-right: 88px !important;
+    }
+
+    #dashboardModal .dashboard-modal__actions {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        margin: 0;
+    }
+
+    #dashboardModal #dashboardClose {
+        border-radius: 999px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #374151;
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+    }
+}
+
+@media (max-width: 480px) {
+    body[data-building-id="B"] .room {
+        width: 72px;
+        height: 54px;
+    }
+
+    body[data-building-id="B"] .room .room-num {
+        font-size: 0.72rem;
+    }
+
+    body[data-building-id="B"] .room .guest-name,
+    body[data-building-id="B"] .room .r-guest {
+        font-size: 0.56rem;
+        line-height: 1.05;
+        max-width: 96%;
+    }
+
+    .service-v2-kpi-num {
+        font-size: 1.4rem;
+    }
+
+    .service-v2-name {
+        font-size: 0.84rem;
+    }
+}
+
+#mobileServiceDrawerToggle,
+#mobileRoomTypeDrawerToggle,
+#mobileServiceDrawerBackdrop {
+    display: none;
+}
+
+#roomInfoModal #room-info-add-fab {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #mobileServiceDrawerToggle {
+        position: fixed;
+        left: 10px;
+        top: 84px;
+        z-index: 4650;
+        border: none;
+        border-radius: 999px;
+        background: #111827;
+        color: #ffffff;
+        padding: 9px 14px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #mobileRoomTypeDrawerToggle {
+        position: fixed;
+        right: 10px;
+        top: 84px;
+        z-index: 4650;
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        background: #ffffff;
+        color: #111827;
+        padding: 9px 14px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #mobileServiceDrawerBackdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.36);
+        z-index: 4550;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+    }
+
+    body.mobile-service-drawer-open #mobileServiceDrawerBackdrop,
+    body.mobile-roomtype-drawer-open #mobileServiceDrawerBackdrop {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    body.mobile-top-nav-open #mobileServiceDrawerToggle,
+    body.mobile-top-nav-open #mobileRoomTypeDrawerToggle {
+        display: none !important;
+    }
+
+    body.quick-update-mode-active #mobileServiceDrawerToggle,
+    body.quick-update-mode-active #mobileRoomTypeDrawerToggle {
+        display: none !important;
+    }
+
+    #admin-modal-canva .settings-tabs-sidebar {
+        width: 64px !important;
+    }
+
+    #admin-modal-canva .settings-tab-btn {
+        justify-content: center !important;
+        gap: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    #admin-modal-canva .settings-tab-label {
+        display: none !important;
+    }
+
+    #admin-modal-canva .settings-tabs-content {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    #roomInfoModal .room-info-add-top {
+        display: none !important;
+    }
+
+    #roomInfoModal .room-info-hero {
+        position: relative;
+        padding: 14px 14px !important;
+        padding-right: 66px !important;
+        border-radius: 16px !important;
+    }
+
+    #roomInfoModal .room-info-header-actions {
+        width: auto !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        position: absolute;
+        top: 8px;
+        right: 8px;
+    }
+
+    #roomInfoModal .room-info-close-top {
+        margin: 0 !important;
+        padding: 10px !important;
+        border-radius: 12px !important;
+    }
+
+    #roomInfoModal #room-info-add-fab {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+}
