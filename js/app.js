@@ -67,6 +67,7 @@ async function loadMaintenanceTasksFromDb() {
             roomId: String(task?.roomId ?? task?.room_id ?? '').trim(),
             type: String(task?.type ?? '').trim(),
             note: String(task?.note ?? '').trim(),
+            remarks: String(task?.remarks ?? '').trim(),
             reportedDate: String(task?.reportedDate ?? task?.reported_date ?? '').trim(),
             resolvedDate: String(task?.resolvedDate ?? task?.resolved_date ?? '').trim(),
             status: String(task?.status ?? 'pending').trim()
@@ -1327,6 +1328,30 @@ window.resolveMaintTaskFromDashboard = function(taskId) {
     })();
 };
 
+window.editMaintenanceRemark = function(taskId) {
+    if (!taskId) return;
+    const task = readMaintTaskLog().find(t => String(t?.id || '') === String(taskId));
+    const currentText = task ? String(task.remarks || '') : '';
+    const next = prompt('Remarks', currentText);
+    if (next === null) return;
+    const remarks = String(next || '').trim();
+
+    if (task) task.remarks = remarks;
+    if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+
+    apiRequest('update_maintenance_remark', {
+        building: BUILDING_ID,
+        task_id: taskId,
+        remarks
+    }).then((res) => {
+        if (!res) {
+            loadMaintenanceTasksFromDb().then(() => {
+                if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+            });
+        }
+    });
+};
+
 window.updateDashboardCharts = function() {
     const rooms = getDashboardRooms();
     const maintStats = getMaintenanceSnapshotStats();
@@ -1529,6 +1554,10 @@ window.updateDashboardCharts = function() {
             const icon = typeof getMaintIconByName === 'function' ? (getMaintIconByName(task.type) || '🔧') : '🔧';
             const iconColor = typeof getMaintColorByIcon === 'function' ? getMaintColorByIcon(icon) : '#f59e0b';
             const noteText = (task.note || '').trim() || '-';
+            const remarksText = (task.remarks || '').trim();
+            const dateText = displayState === 'resolved'
+                ? (resolvedDate || reportedDate || '-')
+                : (reportedDate || '-');
             const canResolveFromDashboard = displayState === 'pending'
                 && status === 'pending'
                 && !isDateRangeMode()
@@ -1565,6 +1594,13 @@ window.updateDashboardCharts = function() {
                 <td class="p-3 font-black text-slate-800 text-lg">#${task.roomId || '-'}</td>
                 <td class="p-3 text-sm text-gray-600">${noteText}</td>
                 <td class="p-3">${statusHtml}</td>
+                <td class="p-3 text-sm text-gray-600 whitespace-nowrap">${dateText}</td>
+                <td class="p-3">
+                    <button type="button" onclick="editMaintenanceRemark('${String(task.id || '')}')" class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border-none cursor-pointer">
+                        <span>✏️</span>
+                        <span>${remarksText || 'Add remark'}</span>
+                    </button>
+                </td>
             `;
             maintTableBody.appendChild(tr);
         });
@@ -1574,7 +1610,7 @@ window.updateDashboardCharts = function() {
             if (taskCount === 0) {
                 maintTaskCountBadge.className = "bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center justify-center whitespace-nowrap leading-none";
                 maintTaskCountBadge.innerText = "✅ All Clear (ไม่มีงานค้าง)";
-                maintTableBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-400 font-medium">ไม่มีรายการแจ้งซ่อมในวันที่เลือก</td></tr>`;
+                maintTableBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 font-medium">ไม่มีรายการแจ้งซ่อมในวันที่เลือก</td></tr>`;
             } else {
                 maintTaskCountBadge.className = "bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center justify-center whitespace-nowrap leading-none";
                 maintTaskCountBadge.innerText = `${taskCount} Task(s)`;

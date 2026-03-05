@@ -304,13 +304,28 @@ switch ($action) {
         $syncType->execute([$building]);
 
         $stmt = $pdo->prepare('
-            SELECT id, building, room_id, type, note, reported_date, resolved_date, status, updated_at
+            SELECT id, building, room_id, type, note, remarks, reported_date, resolved_date, status, updated_at
             FROM maintenance_tasks
             WHERE building = ?
             ORDER BY reported_date DESC, id DESC
         ');
         $stmt->execute([$building]);
         json_ok(['tasks' => $stmt->fetchAll()]);
+    }
+    case 'update_maintenance_remark': {
+        $taskId = (int)($input['task_id'] ?? $_REQUEST['task_id'] ?? 0);
+        $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
+        $remarks = trim((string)($input['remarks'] ?? $_REQUEST['remarks'] ?? ''));
+        if ($taskId <= 0 || $building === '') {
+            json_err('Missing task_id or building');
+        }
+        $stmt = $pdo->prepare("
+            UPDATE maintenance_tasks
+            SET remarks = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND building = ?
+        ");
+        $stmt->execute([$remarks, $taskId, $building]);
+        json_ok();
     }
     case 'resolve_maintenance_task': {
         $taskId = (int)($input['task_id'] ?? $_REQUEST['task_id'] ?? 0);

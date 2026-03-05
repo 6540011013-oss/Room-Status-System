@@ -122,6 +122,7 @@ function ensure_tables(PDO $pdo): void
             room_id VARCHAR(32) NOT NULL,
             type VARCHAR(255) NOT NULL,
             note TEXT,
+            remarks TEXT,
             reported_date DATE NOT NULL,
             resolved_date DATE NULL,
             status VARCHAR(16) NOT NULL DEFAULT 'pending',
@@ -158,6 +159,11 @@ function ensure_tables(PDO $pdo): void
     }
     try {
         $pdo->exec("ALTER TABLE room_status_history ADD COLUMN room_image MEDIUMBLOB NULL AFTER bed_badge;");
+    } catch (Throwable $e) {
+        // ignore when already exists
+    }
+    try {
+        $pdo->exec("ALTER TABLE maintenance_tasks ADD COLUMN remarks TEXT NULL AFTER note;");
     } catch (Throwable $e) {
         // ignore when already exists
     }
