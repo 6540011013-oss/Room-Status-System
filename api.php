@@ -304,7 +304,7 @@ switch ($action) {
         $syncType->execute([$building]);
 
         $stmt = $pdo->prepare('
-            SELECT id, building, room_id, type, note, remarks, reported_date, resolved_date, status, updated_at
+            SELECT id, building, room_id, type, maint_icon, note, remarks, reported_date, resolved_date, status, updated_at
             FROM maintenance_tasks
             WHERE building = ?
             ORDER BY reported_date DESC, id DESC
@@ -464,6 +464,7 @@ switch ($action) {
         $roomType = trim((string)($input['room_type'] ?? $_REQUEST['room_type'] ?? ''));
         $roomNote = trim((string)($input['room_note'] ?? $_REQUEST['room_note'] ?? ''));
         $maintStatus = trim((string)($input['maint_status'] ?? $_REQUEST['maint_status'] ?? ''));
+        $maintIcon = trim((string)($input['maint_icon'] ?? $_REQUEST['maint_icon'] ?? ''));
         $maintNote = trim((string)($input['maint_note'] ?? $_REQUEST['maint_note'] ?? ''));
         $quickToggleRemove = (int)($input['quick_toggle_remove'] ?? $_REQUEST['quick_toggle_remove'] ?? 0);
         $apInstalled = (int)($input['ap_installed'] ?? $_REQUEST['ap_installed'] ?? 0);
@@ -472,6 +473,14 @@ switch ($action) {
         $roomImageBin = decode_room_image((string)($input['room_image'] ?? $_REQUEST['room_image'] ?? ''));
 
         $apDateValue = $apDate === '' ? null : $apDate;
+        if ($maintStatus !== '' && $maintIcon === '') {
+            $findMaintIcon = $pdo->prepare('SELECT icon FROM maintenance_categories WHERE name = ? AND is_active = 1 LIMIT 1');
+            $findMaintIcon->execute([$maintStatus]);
+            $row = $findMaintIcon->fetch();
+            if ($row && isset($row['icon'])) {
+                $maintIcon = trim((string)$row['icon']);
+            }
+        }
 
         $stmt = $pdo->prepare("
             INSERT INTO rooms_status
@@ -505,16 +514,16 @@ switch ($action) {
             if ($pending && isset($pending['id'])) {
                 $updPending = $pdo->prepare("
                     UPDATE maintenance_tasks
-                    SET type = ?, note = ?, updated_at = CURRENT_TIMESTAMP
+                    SET type = ?, maint_icon = CASE WHEN ? <> '' THEN ? ELSE maint_icon END, note = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
-                $updPending->execute([$maintStatus, $maintNote, (int)$pending['id']]);
+                $updPending->execute([$maintStatus, $maintIcon, $maintIcon, $maintNote, (int)$pending['id']]);
             } else {
                 $insPending = $pdo->prepare("
-                    INSERT INTO maintenance_tasks (building, room_id, type, note, reported_date, status)
-                    VALUES (?, ?, ?, ?, CURDATE(), 'pending')
+                    INSERT INTO maintenance_tasks (building, room_id, type, maint_icon, note, reported_date, status)
+                    VALUES (?, ?, ?, ?, ?, CURDATE(), 'pending')
                 ");
-                $insPending->execute([$building, $roomId, $maintStatus, $maintNote]);
+                $insPending->execute([$building, $roomId, $maintStatus, $maintIcon, $maintNote]);
             }
         } else {
             if ($quickToggleRemove === 1) {

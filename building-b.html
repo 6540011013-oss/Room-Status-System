@@ -5,7 +5,7 @@
   <title>Building B </title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <link rel="stylesheet" href="css/style.css?v=20260305m8">
+  <link rel="stylesheet" href="css/style.css?v=20260305m9">
   <script src="https://cdn.tailwindcss.com"></script>
 <style type="text/tailwindcss">
     @keyframes slideIn {
@@ -782,7 +782,7 @@ function toggleAPDate() {
         
         <div id="dynamicSummaryRow" class="dashboard-summary-row"></div>
 
-        <div class="dashboard-analytic-card dashboard-analytic-card--wide mt-6">
+        <div id="maintTaskCard" class="dashboard-analytic-card dashboard-analytic-card--wide mt-6">
                 <div class="dashboard-card__header flex justify-between items-center">
                     <span>Active Maintenance Tasks (Pending vs Resolved)</span>
                     <span id="maintTaskCount" class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold">0 Pending</span>
@@ -985,6 +985,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  function refreshMaintenanceRealtime() {
+    localStorage.setItem('maint_cats_final_v1', JSON.stringify(maintenanceCats));
+    renderMaintenance();
+    if (typeof window.renderServiceSidebar === 'function') window.renderServiceSidebar();
+  }
+
   window.deleteItem = async function(type, index) {
     if (!confirm('Confirm delete?')) return;
     if (type === 'room') {
@@ -992,7 +998,11 @@ document.addEventListener('DOMContentLoaded', function() {
       if (item && item.id) await apiRequest('delete_room_type', { id: item.id });
     } else {
       const item = maintenanceCats[index];
-      if (item) await apiRequest('delete_maintenance_category', item.id ? { id: item.id } : { name: item.name });
+      if (item) {
+        maintenanceCats.splice(index, 1);
+        refreshMaintenanceRealtime();
+        await apiRequest('delete_maintenance_category', item.id ? { id: item.id } : { name: item.name });
+      }
     }
     await syncFromDb();
   };
@@ -1013,6 +1023,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const name = document.getElementById('maintenance-name')?.value.trim();
     const icon = document.getElementById('selected-icon')?.value || '';
     if (!name) return;
+    maintenanceCats.push({ name, icon });
+    refreshMaintenanceRealtime();
     await apiRequest('add_maintenance_category', { name, icon });
     document.getElementById('maintenance-name').value = '';
     await syncFromDb();

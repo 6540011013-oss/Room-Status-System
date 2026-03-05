@@ -121,6 +121,7 @@ function ensure_tables(PDO $pdo): void
             building VARCHAR(8) NOT NULL,
             room_id VARCHAR(32) NOT NULL,
             type VARCHAR(255) NOT NULL,
+            maint_icon VARCHAR(32) NULL,
             note TEXT,
             remarks TEXT,
             reported_date DATE NOT NULL,
@@ -164,6 +165,11 @@ function ensure_tables(PDO $pdo): void
     }
     try {
         $pdo->exec("ALTER TABLE maintenance_tasks ADD COLUMN remarks TEXT NULL AFTER note;");
+    } catch (Throwable $e) {
+        // ignore when already exists
+    }
+    try {
+        $pdo->exec("ALTER TABLE maintenance_tasks ADD COLUMN maint_icon VARCHAR(32) NULL AFTER type;");
     } catch (Throwable $e) {
         // ignore when already exists
     }

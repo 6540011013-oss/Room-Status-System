@@ -1778,10 +1778,9 @@ body {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
-    body.print-plan > *:not(.plan-wrapper) { display: none !important; }
+    body.print-plan > *:not(.plan-wrapper):not(#dashboardModal):not(#printMaintPage) { display: none !important; }
     body.print-plan .page-navbar,
     body.print-plan .dashboard-fab,
-    body.print-plan #dashboardModal,
     body.print-plan #adminModal,
     body.print-plan #roomEditModal,
     body.print-plan #roomInfoModal,
@@ -1794,6 +1793,8 @@ body {
         width: 100% !important;
         height: 100vh !important;
         overflow: visible !important;
+        page-break-after: always !important;
+        break-after: page !important;
     }
     body.print-plan .building,
     body.print-plan .building-plan,
@@ -1808,6 +1809,81 @@ body {
     body.print-plan .floor19 > div {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+    }
+
+    /* Sheet 2: show only Active Maintenance Tasks card */
+    body.print-plan #dashboardModal {
+        display: none !important;
+        position: static !important;
+        inset: auto !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        page-break-before: always !important;
+        break-before: page !important;
+    }
+    body.print-plan #dashboardModal.hidden {
+        display: none !important;
+    }
+    body.print-plan #dashboardModal .dashboard-modal__panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: #ffffff !important;
+    }
+    body.print-plan #dashboardModal .dashboard-modal__content,
+    body.print-plan #dashboardModal .dashboard-analytics {
+        display: block !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    body.print-plan #dashboardModal .dashboard-modal__header,
+    body.print-plan #dashboardModal #dynamicSummaryRow,
+    body.print-plan #dashboardModal .dashboard-grid {
+        display: none !important;
+    }
+    body.print-plan #dashboardModal #maintTaskCard {
+        display: block !important;
+        margin-top: 0 !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+    }
+    body.print-plan #dashboardModal .dashboard-table-wrap {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    body.print-plan #dashboardModal .dashboard-table {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+    body.print-plan #dashboardModal .dashboard-table tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    body.print-plan #printMaintPage {
+        display: block !important;
+        position: static !important;
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 7mm 0 0 0 !important;
+        page-break-before: auto !important;
+        break-before: auto !important;
+    }
+    body.print-plan #printMaintPage .dashboard-analytic-card {
+        display: block !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        min-height: auto !important;
+        background: #ffffff !important;
+    }
+    body.print-plan #printMaintPage .dashboard-table-wrap {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
     }
 }
 /* =========================================

@@ -39,6 +39,7 @@ async function loadMaintenanceTasksFromDbB() {
             id: task?.id ?? null,
             roomId: String(task?.roomId ?? task?.room_id ?? '').trim(),
             type: String(task?.type ?? '').trim(),
+            icon: String(task?.icon ?? task?.maint_icon ?? '').trim(),
             note: String(task?.note ?? '').trim(),
             reportedDate: String(task?.reportedDate ?? task?.reported_date ?? '').trim(),
             resolvedDate: String(task?.resolvedDate ?? task?.resolved_date ?? '').trim(),
@@ -273,13 +274,15 @@ function clearRoomTypeColorsB() {
 }
 
 async function saveRoomStateToDbB(roomId, data) {
+    const maintStatus = String(data.maintStatus || '').trim();
     await apiRequest('save_room_state', {
         building: BUILDING_ID,
         room_id: roomId,
         guest_name: data.guestName || '',
         room_type: data.typeClass || '',
         room_note: data.roomNote || '',
-        maint_status: data.maintStatus || '',
+        maint_status: maintStatus,
+        maint_icon: maintStatus ? (getMaintIconB(maintStatus) || '') : '',
         maint_note: data.maintNote || '',
         ap_installed: data.apChecked ? 1 : 0,
         ap_install_date: data.apDate || '',
@@ -982,6 +985,10 @@ window.saveRoomInfoNote = async function() {
         room_type: getRoomTypeIdForRoom(currentViewingRoom),
         room_note: note,
         maint_status: String(currentViewingRoom.getAttribute('data-maint') || '').trim(),
+        maint_icon: (() => {
+            const s = String(currentViewingRoom.getAttribute('data-maint') || '').trim();
+            return s ? (getMaintIconB(s) || '') : '';
+        })(),
         maint_note: String(currentViewingRoom.getAttribute('data-maint-note') || '').trim(),
         ap_installed: currentViewingRoom.getAttribute('data-ap') === 'true' ? 1 : 0,
         ap_install_date: String(currentViewingRoom.getAttribute('data-ap-date') || '').trim(),
@@ -1134,6 +1141,9 @@ function getMaintIconB(maintName) {
     // จุดสำคัญ: เพิ่ม .trim() เพื่อให้จับคู่กับชื่อที่มีในระบบได้ถูกต้องเป๊ะๆ
     const found = list.find(c => String(c.name || '').trim() === cleanName);
     if (found) return found.icon;
+
+    const fromTaskLog = getStoredTaskIconByTypeB(cleanName);
+    if (fromTaskLog) return fromTaskLog;
     
     // ใช้ fallback ชุดเดียวกับตึก A
     if (cleanName === 'WiFi Install / Network Repair') return '📶';
@@ -1141,6 +1151,84 @@ function getMaintIconB(maintName) {
     if (cleanName === 'Housekeeping') return '🧹';
     if (cleanName === 'General Maintenance') return '🔧';
     return '🔧';
+}
+
+function getStoredTaskIconByTypeB(typeName) {
+    const target = String(typeName || '').trim();
+    if (!target) return '';
+    for (let i = maintTaskLogCache.length - 1; i >= 0; i -= 1) {
+        const t = maintTaskLogCache[i];
+        if (String(t?.type || '').trim() !== target) continue;
+        const icon = String(t?.icon ?? t?.maint_icon ?? '').trim();
+        if (icon) return icon;
+    }
+    return '';
+}
+
+function getTaskStateOnDateB(task, dateISO, todayISO) {
+    const reportedDate = String(task?.reportedDate || task?.reported_date || '').trim();
+    const resolvedDate = String(task?.resolvedDate || task?.resolved_date || '').trim();
+    const status = String(task?.status || 'pending').trim();
+    if (!reportedDate || !dateISO) return null;
+    if (dateISO < reportedDate) return null;
+    if (status === 'pending') {
+        return (dateISO <= todayISO) ? 'pending' : null;
+    }
+    if (status === 'resolved') {
+        if (!resolvedDate) return (dateISO <= todayISO) ? 'pending' : null;
+        if (dateISO < resolvedDate) return 'pending';
+        if (dateISO === resolvedDate) return 'resolved';
+        return null;
+    }
+    return null;
+}
+
+function getMaintenanceSnapshotStatsB() {
+    const pendingByType = new Map();
+    const resolvedByType = new Map();
+    const todayISO = getTodayLocal();
+    maintTaskLogCache.forEach(task => {
+        const type = String(task?.type || '').trim();
+        const roomId = String(task?.roomId || '').trim();
+        if (!type || !roomId) return;
+        const state = getTaskStateOnDateB(task, selectedSnapshotDate, todayISO);
+        if (!state) return;
+        if (state === 'pending') {
+            pendingByType.set(type, (pendingByType.get(type) || 0) + 1);
+            return;
+        }
+        resolvedByType.set(type, (resolvedByType.get(type) || 0) + 1);
+    });
+    return { pendingByType, resolvedByType };
+}
+
+function getServiceStatusCategoriesB(stats) {
+    const configured = (() => {
+        try { return JSON.parse(localStorage.getItem('maint_cats_final_v1')) || []; } catch { return []; }
+    })();
+    const order = [];
+    const byName = new Map();
+    configured.forEach(cat => {
+        const name = String(cat?.name || '').trim();
+        if (!name) return;
+        order.push(name);
+        byName.set(name, { name, icon: String(cat?.icon || '').trim() || getStoredTaskIconByTypeB(name) || '🔧' });
+    });
+
+    const dynamic = new Set([
+        ...Array.from(stats.pendingByType.keys()),
+        ...Array.from(stats.resolvedByType.keys())
+    ].map(v => String(v || '').trim()).filter(Boolean));
+
+    dynamic.forEach(name => {
+        if (byName.has(name)) return;
+        byName.set(name, { name, icon: getStoredTaskIconByTypeB(name) || getMaintIconB(name) || '🔧' });
+    });
+
+    const merged = [];
+    order.forEach(name => { if (byName.has(name)) merged.push(byName.get(name)); });
+    Array.from(byName.keys()).filter(name => !order.includes(name)).sort((a, b) => a.localeCompare(b, 'th')).forEach(name => merged.push(byName.get(name)));
+    return merged;
 }
 
 function getMaintColorByIcon(icon) {
@@ -1223,12 +1311,20 @@ function toggleFilterB(filterName) {
 function renderServiceSidebarB() {
     const sidebarContainer = document.getElementById('service-sidebar-list');
     if (!sidebarContainer) return;
-    const categories = JSON.parse(localStorage.getItem('maint_cats_final_v1')) || [];
-    const allRooms = getRoomElementsB();
+    const stats = getMaintenanceSnapshotStatsB();
+    const categories = getServiceStatusCategoriesB(stats);
+    const validNames = new Set(categories.map(c => String(c?.name || '').trim()).filter(Boolean));
+    activeFilters.forEach(name => {
+      if (!validNames.has(String(name || '').trim())) activeFilters.delete(name);
+    });
+    applyFiltersB();
     sidebarContainer.innerHTML = '';
 
     categories.forEach(cat => {
-        const count = Array.from(allRooms).filter(room => room.getAttribute('data-maint') === cat.name).length;
+        const pendingCount = stats.pendingByType.get(cat.name) || 0;
+        const resolvedCount = stats.resolvedByType.get(cat.name) || 0;
+        const count = pendingCount + resolvedCount;
+        if (count <= 0) return;
         let colorTheme = { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-500', badge: 'bg-slate-400' };
 
         if (cat.icon === '๐“ถ') colorTheme = { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', badge: 'bg-blue-600' };
@@ -1524,4 +1620,3 @@ function initDashboardSummaryB() {
         document.body.classList.remove('print-report');
     });
 }
-

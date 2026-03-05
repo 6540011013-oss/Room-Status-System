@@ -66,6 +66,7 @@ async function loadMaintenanceTasksFromDb() {
             id: task?.id ?? null,
             roomId: String(task?.roomId ?? task?.room_id ?? '').trim(),
             type: String(task?.type ?? '').trim(),
+            icon: String(task?.icon ?? task?.maint_icon ?? '').trim(),
             note: String(task?.note ?? '').trim(),
             remarks: String(task?.remarks ?? '').trim(),
             reportedDate: String(task?.reportedDate ?? task?.reported_date ?? '').trim(),
@@ -466,13 +467,15 @@ function clearRoomTypeColors() {
 }
 
 async function saveRoomStateToDb(roomId, data) {
+    const maintStatus = String(data.maintStatus || '').trim();
     await apiRequest('save_room_state', {
         building: BUILDING_ID,
         room_id: roomId,
         guest_name: data.name || '',
         room_type: data.typeClass || '',
         room_note: data.roomNote || '',
-        maint_status: data.maintStatus || '',
+        maint_status: maintStatus,
+        maint_icon: maintStatus ? (getMaintIconByName(maintStatus) || '') : '',
         maint_note: data.maintNote || '',
         ap_installed: data.apChecked ? 1 : 0,
         ap_install_date: data.apDate || '',
@@ -743,6 +746,10 @@ window.saveRoomInfoNote = async function() {
         room_type: getRoomTypeIdForRoom(currentViewingRoom),
         room_note: note,
         maint_status: String(currentViewingRoom.getAttribute('data-maint') || '').trim(),
+        maint_icon: (() => {
+            const s = String(currentViewingRoom.getAttribute('data-maint') || '').trim();
+            return s ? (getMaintIconByName(s) || '') : '';
+        })(),
         maint_note: String(currentViewingRoom.getAttribute('data-maint-note') || '').trim(),
         ap_installed: currentViewingRoom.getAttribute('data-ap') === 'true' ? 1 : 0,
         ap_install_date: String(currentViewingRoom.getAttribute('data-ap-date') || '').trim(),
@@ -1087,9 +1094,72 @@ function getMaintenanceCategories() {
 }
 
 function getMaintIconByName(maintName) {
+    const target = String(maintName || '').trim();
     const list = getMaintenanceCategories();
-    const found = list.find(c => c.name === maintName);
-    return found ? found.icon : null;
+    const found = list.find(c => String(c?.name || '').trim() === target);
+    if (found && String(found.icon || '').trim()) return String(found.icon).trim();
+
+    const fallbackMap = {
+        'ไฟฟ้า': '⚡',
+        'แอร์': '❄️',
+        'ประปา': '💧',
+        'ซ่อมทั่วไป': '🔧',
+        'WiFi Install / Network Repair': '📶',
+        'Aircon Cleaning / Repair': '❄️',
+        'Housekeeping': '🧹',
+        'General Maintenance': '🔧'
+    };
+    return fallbackMap[target] || null;
+}
+
+function getMaintIconForTask(task) {
+    const fromTask = String(task?.icon ?? task?.maint_icon ?? '').trim();
+    if (fromTask) return fromTask;
+    const fromType = getMaintIconByName(String(task?.type || '').trim());
+    return fromType || '🔧';
+}
+
+function getStoredTaskIconByType(typeName) {
+    const target = String(typeName || '').trim();
+    if (!target) return '';
+    for (let i = maintTaskLogCache.length - 1; i >= 0; i -= 1) {
+        const t = maintTaskLogCache[i];
+        if (String(t?.type || '').trim() !== target) continue;
+        const icon = String(t?.icon ?? t?.maint_icon ?? '').trim();
+        if (icon) return icon;
+    }
+    return '';
+}
+
+function getServiceStatusCategories(stats) {
+    const configured = getMaintenanceCategories();
+    const configuredOrder = [];
+    const byName = new Map();
+
+    configured.forEach(cat => {
+        const name = String(cat?.name || '').trim();
+        if (!name) return;
+        configuredOrder.push(name);
+        byName.set(name, { name, icon: String(cat?.icon || '').trim() || getStoredTaskIconByType(name) || '🔧' });
+    });
+
+    const dynamicNames = new Set([
+        ...Array.from(stats?.pendingByType?.keys?.() || []),
+        ...Array.from(stats?.resolvedByType?.keys?.() || [])
+    ].map(v => String(v || '').trim()).filter(Boolean));
+
+    dynamicNames.forEach(name => {
+        if (byName.has(name)) return;
+        byName.set(name, { name, icon: getStoredTaskIconByType(name) || getMaintIconByName(name) || '🔧' });
+    });
+
+    const ordered = [];
+    configuredOrder.forEach(name => { if (byName.has(name)) ordered.push(byName.get(name)); });
+    Array.from(byName.keys())
+        .filter(name => !configuredOrder.includes(name))
+        .sort((a, b) => a.localeCompare(b, 'th'))
+        .forEach(name => ordered.push(byName.get(name)));
+    return ordered;
 }
 
 function readMaintTaskLog() {
@@ -1216,7 +1286,7 @@ function getFilteredRoomStateMap(typeFilters = null) {
             return;
         }
 
-        const icon = getMaintIconByName(taskType) || '🔧';
+        const icon = getMaintIconForTask(task);
         const note = String(task?.note || '').trim();
         variants.forEach(id => {
             if (!pendingMap.has(id)) {
@@ -1420,12 +1490,16 @@ window.updateDashboardCharts = function() {
         const countMap = new Map();
         cats.forEach(c => countMap.set(c.name, { pending: 0, resolved: 0, icon: c.icon }));
         maintStats.pendingByType.forEach((count, maint) => {
-            if (!countMap.has(maint)) countMap.set(maint, { pending: 0, resolved: 0, icon: '🔧' });
+            if (!countMap.has(maint)) {
+                countMap.set(maint, { pending: 0, resolved: 0, icon: getStoredTaskIconByType(maint) || '🔧' });
+            }
             const entry = countMap.get(maint);
             entry.pending = count;
         });
         maintStats.resolvedByType.forEach((count, maint) => {
-            if (!countMap.has(maint)) countMap.set(maint, { pending: 0, resolved: 0, icon: '🔧' });
+            if (!countMap.has(maint)) {
+                countMap.set(maint, { pending: 0, resolved: 0, icon: getStoredTaskIconByType(maint) || '🔧' });
+            }
             const entry = countMap.get(maint);
             entry.resolved = count;
         });
@@ -1551,7 +1625,7 @@ window.updateDashboardCharts = function() {
 
             taskCount++;
 
-            const icon = typeof getMaintIconByName === 'function' ? (getMaintIconByName(task.type) || '🔧') : '🔧';
+            const icon = getMaintIconForTask(task);
             const iconColor = typeof getMaintColorByIcon === 'function' ? getMaintColorByIcon(icon) : '#f59e0b';
             const noteText = (task.note || '').trim() || '-';
             const remarksText = (task.remarks || '').trim();
@@ -1751,6 +1825,10 @@ window.saveCanvaItem = async function() {
             room_type: getRoomTypeIdForRoom(currentViewingRoom),
             room_note: String(currentViewingRoom.getAttribute('data-room-note') || '').trim(),
             maint_status: String(currentViewingRoom.getAttribute('data-maint') || '').trim(),
+            maint_icon: (() => {
+                const s = String(currentViewingRoom.getAttribute('data-maint') || '').trim();
+                return s ? (getMaintIconByName(s) || '') : '';
+            })(),
             maint_note: String(currentViewingRoom.getAttribute('data-maint-note') || '').trim(),
             ap_installed: currentViewingRoom.getAttribute('data-ap') === 'true' ? 1 : 0,
             ap_install_date: String(currentViewingRoom.getAttribute('data-ap-date') || '').trim(),
@@ -1794,8 +1872,17 @@ window.deleteInfoItem = function(roomId, index) {
 function renderServiceSidebar() {
     const sidebarContainer = document.getElementById('service-sidebar-list');
     if (!sidebarContainer) return;
-    const categories = JSON.parse(localStorage.getItem('maint_cats_final_v1')) || [];
     const stats = getMaintenanceSnapshotStats();
+    const categories = getServiceStatusCategories(stats);
+    const validCategoryNames = new Set(categories.map(c => String(c?.name || '').trim()).filter(Boolean));
+    let filterPruned = false;
+    activeFilters.forEach(name => {
+        if (!validCategoryNames.has(String(name || '').trim())) {
+            activeFilters.delete(name);
+            filterPruned = true;
+        }
+    });
+    if (filterPruned) applyActiveFiltersToRooms();
     sidebarContainer.innerHTML = '';
 
     const totalPending = Array.from(stats.pendingByType.values()).reduce((sum, n) => sum + n, 0);
@@ -2173,6 +2260,7 @@ getRoomElements().forEach(el => {
                 guest_name: (el.getAttribute('data-name') || '').trim(),
                 room_type: el.getAttribute('data-type') || '',
                 maint_status: newStatus,
+                maint_icon: newStatus ? (getMaintIcon(newStatus) || '') : '',
                 maint_note: newStatus ? String(el.getAttribute('data-maint-note') || '').trim() : '',
                 quick_toggle_remove: newStatus === '' ? 1 : 0,
                 ap_installed: el.getAttribute('data-ap') === 'true' ? 1 : 0,
@@ -2279,6 +2367,7 @@ if (btnSave) {
             room_type: typeClass,
             room_note: roomNote,
             maint_status: maintStatus,
+            maint_icon: maintStatus ? (getMaintIcon(maintStatus) || '') : '',
             maint_note: maintNote,
             ap_installed: apChecked ? 1 : 0,
             ap_install_date: apDate,
@@ -3123,6 +3212,20 @@ function initDashboardSummary() {
     if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
     if (printBtn) printBtn.addEventListener('click', () => {
+        if (typeof window.updateDashboardCharts === 'function') {
+            window.updateDashboardCharts();
+        }
+        const sourceMaintCard = document.getElementById('maintTaskCard');
+        let printMaintPage = document.getElementById('printMaintPage');
+        if (!printMaintPage) {
+            printMaintPage = document.createElement('section');
+            printMaintPage.id = 'printMaintPage';
+            document.body.appendChild(printMaintPage);
+        }
+        printMaintPage.innerHTML = sourceMaintCard
+            ? sourceMaintCard.outerHTML
+            : '<div class="dashboard-analytic-card"><div class="dashboard-card__header">Active Maintenance Tasks</div><div class="p-3">No data</div></div>';
+        modal.classList.remove('hidden');
         document.body.dataset.printMode = 'plan';
         document.body.classList.add('print-plan');
         window.print();
@@ -3235,6 +3338,8 @@ window.addEventListener('beforeprint', () => {
         document.body.classList.add('print-report');
         document.body.classList.remove('print-plan');
     } else {
+        const dashboardModal = document.getElementById('dashboardModal');
+        if (dashboardModal) dashboardModal.classList.remove('hidden');
         document.body.classList.add('print-plan');
         document.body.classList.remove('print-report');
     }
@@ -3251,6 +3356,8 @@ window.addEventListener('afterprint', () => {
     document.body.classList.remove('print-report');
     document.body.classList.remove('print-plan');
     document.body.dataset.printMode = '';
+    const printMaintPage = document.getElementById('printMaintPage');
+    if (printMaintPage) printMaintPage.remove();
 });
 }
 
