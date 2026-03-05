@@ -218,6 +218,44 @@ switch ($action) {
         $rows = array_map('map_room_row_with_image', $rows);
         json_ok(['rooms' => $rows]);
     }
+    case 'get_latest_snapshot_date': {
+        $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
+        if ($building === '') {
+            json_err('Missing building');
+        }
+
+        // If current room state exists, treat "today" as latest.
+        $currentStmt = $pdo->prepare('SELECT COUNT(*) FROM rooms_status WHERE building = ?');
+        $currentStmt->execute([$building]);
+        $currentCount = (int)$currentStmt->fetchColumn();
+        if ($currentCount > 0) {
+            $today = (new DateTimeImmutable('now'))->format('Y-m-d');
+            json_ok(['latest_date' => $today]);
+        }
+
+        $latest = null;
+        $histStmt = $pdo->prepare('SELECT MAX(snapshot_date) FROM room_status_history WHERE building = ?');
+        $histStmt->execute([$building]);
+        $histMax = trim((string)$histStmt->fetchColumn());
+        if ($histMax !== '') {
+            $latest = $histMax;
+        }
+
+        if ($latest === null) {
+            $itemStmt = $pdo->prepare('SELECT MAX(snapshot_date) FROM room_items_history WHERE building = ?');
+            $itemStmt->execute([$building]);
+            $itemMax = trim((string)$itemStmt->fetchColumn());
+            if ($itemMax !== '') {
+                $latest = $itemMax;
+            }
+        }
+
+        if ($latest === null) {
+            $latest = (new DateTimeImmutable('now'))->format('Y-m-d');
+        }
+
+        json_ok(['latest_date' => $latest]);
+    }
     case 'get_room_snapshots': {
         $building = trim((string)($input['building'] ?? $_REQUEST['building'] ?? ''));
         $date = trim((string)($input['snapshot_date'] ?? $_REQUEST['snapshot_date'] ?? ''));

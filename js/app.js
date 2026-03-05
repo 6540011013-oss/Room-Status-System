@@ -16,9 +16,6 @@ let imageViewerIndex = 0;
 let editingItemRoomId = '';
 let editingItemIndex = -1;
 let maintenanceChart = null;
-if (document.documentElement) {
-    document.documentElement.classList.add('room-hydrating');
-}
 const BUILDING_ID = String(document.body?.dataset?.buildingId || 'A').trim().toUpperCase();
 const API_URL = 'api.php';
 const DATE_STORAGE_KEY = `room_snapshot_date_${BUILDING_ID.toLowerCase()}_v1`;
@@ -120,13 +117,12 @@ function getTodayLocal() {
     return formatDateLocal(new Date());
 }
 
-let selectedSnapshotDate = localStorage.getItem(DATE_STORAGE_KEY) || getTodayLocal();
-if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedSnapshotDate)) {
-    selectedSnapshotDate = getTodayLocal();
-    localStorage.setItem(DATE_STORAGE_KEY, selectedSnapshotDate);
-}
-let selectedRangeStartDate = localStorage.getItem(DATE_RANGE_START_STORAGE_KEY) || selectedSnapshotDate;
-let selectedRangeEndDate = localStorage.getItem(DATE_RANGE_END_STORAGE_KEY) || selectedSnapshotDate;
+let selectedSnapshotDate = getTodayLocal();
+let selectedRangeStartDate = selectedSnapshotDate;
+let selectedRangeEndDate = selectedSnapshotDate;
+localStorage.setItem(DATE_STORAGE_KEY, selectedSnapshotDate);
+localStorage.setItem(DATE_RANGE_START_STORAGE_KEY, selectedRangeStartDate);
+localStorage.setItem(DATE_RANGE_END_STORAGE_KEY, selectedRangeEndDate);
 
 function syncSelectedDateRange() {
     let start = String(selectedRangeStartDate || '').trim();
@@ -165,6 +161,16 @@ function setSelectedDateRange(startISO, endISO) {
 function setSelectedSingleDate(dateISO) {
     const d = String(dateISO || '').slice(0, 10);
     setSelectedDateRange(d, d);
+}
+
+async function syncLatestSelectedDateFromDb() {
+    const res = await apiRequest('get_latest_snapshot_date', { building: BUILDING_ID });
+    const latest = String(res?.latest_date || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(latest)) {
+        setSelectedSingleDate(latest);
+    } else {
+        setSelectedSingleDate(getTodayLocal());
+    }
 }
 
 function isTodayEditableSelection() {
@@ -2054,6 +2060,7 @@ function initMobileSwipeToHome() {
 
 // --- Init ---
 document.addEventListener('DOMContentLoaded', async function() {
+    await syncLatestSelectedDateFromDb();
     // Do not block first paint for Service Status.
     syncAdminPasswordFromDb();
     syncItemCategoriesFromDb().then(() => {
@@ -2507,7 +2514,6 @@ async function applyRoomStatesFromDb() {
         loadRoomInfoMapFromDb(),
         loadMaintenanceTasksFromDb()
     ]).finally(() => {
-        document.documentElement.classList.remove('room-hydrating');
         applyApBadges();
         renderServiceSidebar();
         initAdminButtonShared();
