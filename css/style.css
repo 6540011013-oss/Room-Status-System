@@ -2446,20 +2446,22 @@ body {
 /* Resolved mark: show at right side inside room */
 .resolved-thumb {
     position: absolute;
-    right: 2px;
-    bottom: 2px;
-    width: 20px;
-    height: 20px;
-    border-radius: 9999px;
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    display: grid;
-    place-items: center;
-    font-size: 12px;
-    line-height: 1;
+    right: 4px;
+    bottom: 4px;
+    width: 22px;
+    height: 22px;
+    background-image: url('../img/check.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    border: none;
+    box-shadow: none;
     pointer-events: none;
-    z-index: 25;
+    z-index: 35;
+}
+
+.item-note-sheet {
+    grid-column: 1 / -1;
 }
 
 /* Filter highlight icon (top-left) */
@@ -2862,6 +2864,15 @@ body.show-filter-icons .filter-icon {
 
 body.show-filter-icons .ap-badge {
     display: grid;
+}
+
+/* Prevent room-type color flash before DB state is hydrated */
+.room-hydrating .room,
+.room-hydrating .room-b,
+.room-hydrating .half,
+.room-hydrating .floor > div,
+.room-hydrating .floor19 > div {
+    background-color: #d1d5db !important;
 }
 
 /* === AP tooltip: white pill (match image 2) === */
@@ -3835,6 +3846,15 @@ body > .page-navbar:first-of-type {
     body.mobile-roomtype-drawer-open #mobileServiceDrawerBackdrop {
         opacity: 1;
         pointer-events: auto;
+    }
+
+    #mobileServiceDrawerToggle,
+    #mobileRoomTypeDrawerToggle {
+        top: 102px;
+    }
+
+    .plan-wrapper {
+        padding-top: 76px !important;
     }
 
     body.mobile-top-nav-open #mobileServiceDrawerToggle,

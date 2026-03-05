@@ -7,9 +7,18 @@ let currentEditingRoom = null;
 let currentViewingRoom = null;
 let activeFilters = new Set(); 
 let currentCategoryFilter = 'all';
+let itemTextOnlyMode = false;
 let currentImageData = '';
+let currentImageDataList = [];
 let imageViewerLastActive = null;
+let imageViewerImages = [];
+let imageViewerIndex = 0;
+let editingItemRoomId = '';
+let editingItemIndex = -1;
 let maintenanceChart = null;
+if (document.documentElement) {
+    document.documentElement.classList.add('room-hydrating');
+}
 const BUILDING_ID = String(document.body?.dataset?.buildingId || 'A').trim().toUpperCase();
 const API_URL = 'api.php';
 const DATE_STORAGE_KEY = `room_snapshot_date_${BUILDING_ID.toLowerCase()}_v1`;
@@ -371,9 +380,13 @@ let roomInfoMapCache = {};
 const roomItemsSaveQueue = new Map();
 
 async function loadRoomInfoMapFromDb() {
-    const res = await apiRequest('get_room_items', { 
-        building: BUILDING_ID 
-    });
+    const snapshotDate = isDateRangeMode() ? selectedRangeEndDate : selectedSnapshotDate;
+    const action = (snapshotDate === getTodayLocal()) ? 'get_room_items' : 'get_room_items_snapshot';
+    const payload = {
+        building: BUILDING_ID,
+        snapshot_date: snapshotDate
+    };
+    const res = await apiRequest(action, payload);
     const map = {};
     if (res && Array.isArray(res.items)) {
         res.items.forEach(row => {
@@ -525,24 +538,51 @@ function renderRoomInfoList(roomId) {
             ? `<p class="text-slate-600 text-sm mb-4 break-words">${noteText}</p>`
             : '';
 
+        const isTextOnly = item?.textOnly === 1 || item?.textOnly === true || String(item?.text_only || '') === '1';
+        const itemImages = Array.isArray(item?.images)
+            ? item.images.map(v => String(v || '').trim()).filter(Boolean)
+            : [];
+        const itemImage = itemImages[0] || ((item.image && item.image.trim() !== '') ? item.image : '');
         const card = document.createElement('div');
-        card.className = 'item-card bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100 cursor-pointer';
+        card.className = isTextOnly
+            ? 'item-note-sheet sm:col-span-2 lg:col-span-3'
+            : 'item-card bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100 cursor-pointer';
         
         // รูปภาพ
         let imgHtml = '';
-       const itemImage = (item.image && item.image.trim() !== '') ? item.image : '';
         if (itemImage && itemImage.trim() !== "") {
             imgHtml = `<img src="${itemImage}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                        <div class="hidden absolute inset-0 items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
         } else {
             imgHtml = `<div class="absolute inset-0 flex items-center justify-center bg-slate-100"><span class="text-5xl">${icon}</span></div>`;
         }
- const deleteButtonHtml = isAdmin
+        const deleteButtonHtml = isAdmin
        ? `<button type="button" onclick="deleteInfoItem('${roomId}', ${realIndex}); return false;" class="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Delete
                 </button>`
             : '';
+        const editButtonHtml = isAdmin
+            ? `<button type="button" onclick="editInfoItem('${roomId}', ${realIndex}); return false;" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 py-2 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5h2M5 5h2m10 0h2M5 12h14M5 19h14"/></svg>
+                    Edit
+                </button>`
+            : '';
+        const actionsHtml = isAdmin
+            ? `<div class="grid grid-cols-2 gap-2">${editButtonHtml}${deleteButtonHtml}</div>`
+            : '';
+
+        if (isTextOnly) {
+            card.innerHTML = `
+                <div class="rounded-2xl bg-slate-50 border border-slate-200 p-5">
+                    <div class="text-xs font-semibold text-slate-500 mb-2">${item.name || 'ข้อความ'}</div>
+                    <div class="min-h-[180px] text-[15px] leading-7 text-slate-700 whitespace-pre-wrap break-words">${noteText || '-'}</div>
+                    <div class="mt-4 max-w-[320px]">${actionsHtml}</div>
+                </div>
+            `;
+            listEl.appendChild(card);
+            return;
+        }
 
         card.innerHTML = `
             <button type="button" class="item-preview-trigger relative h-36 w-full bg-gradient-to-br from-slate-100 to-slate-200 border-none p-0">
@@ -550,6 +590,7 @@ function renderRoomInfoList(roomId) {
                 <span class="category-badge absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm text-slate-700 shadow-sm">
                     ${icon} ${displayCategory}
                 </span>
+                ${itemImages.length > 1 ? `<span class="absolute left-3 top-3 px-2 py-1 rounded-full text-[11px] font-bold bg-black/60 text-white">${itemImages.length} Photos</span>` : ''}
             </button>
             <div class="p-4">
                 <h3 class="font-bold text-slate-800 text-lg mb-1 truncate">${item.name}</h3>
@@ -558,7 +599,7 @@ function renderRoomInfoList(roomId) {
                     ${dimText}
                 </p>
                 ${noteHtml}
-                ${deleteButtonHtml}
+                ${actionsHtml}
             </div>
         `;
         const previewBtn = card.querySelector('.item-preview-trigger');
@@ -566,7 +607,7 @@ function renderRoomInfoList(roomId) {
             if (itemImage && itemImage.trim() !== '') {
                 previewBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    openImageViewer(itemImage, item.name || `Room ${roomId}`);
+                    openImageViewer(itemImages.length ? itemImages : [itemImage], item.name || `Room ${roomId}`);
                 });
             } else {
                 previewBtn.disabled = true;
@@ -718,17 +759,34 @@ window.closeInfoModal = function() {
     currentViewingRoom = null;
 }
 
-window.openImageViewer = function(src, caption = '') {
-    const modal = el('imageViewerModal');
+function updateImageViewerFrame(caption = '') {
     const img = el('imageViewerImg');
     const captionEl = el('imageViewerCaption');
-    if (!modal || !img) return;
-    const imageSrc = String(src || '').trim();
-    if (!imageSrc) return;
+    const indexEl = el('imageViewerIndex');
+    const prevBtn = el('imageViewerPrev');
+    const nextBtn = el('imageViewerNext');
+    if (!img) return;
+    const total = imageViewerImages.length;
+    if (!total) return;
+    imageViewerIndex = Math.max(0, Math.min(imageViewerIndex, total - 1));
+    img.src = imageViewerImages[imageViewerIndex] || '';
+    if (captionEl) captionEl.textContent = String(caption || '').trim();
+    if (indexEl) indexEl.textContent = `${imageViewerIndex + 1}/${total}`;
+    if (prevBtn) prevBtn.disabled = total <= 1;
+    if (nextBtn) nextBtn.disabled = total <= 1;
+}
+
+window.openImageViewer = function(src, caption = '') {
+    const modal = el('imageViewerModal');
+    if (!modal) return;
+    const list = Array.isArray(src) ? src : [src];
+    const cleaned = list.map(v => String(v || '').trim()).filter(Boolean);
+    if (!cleaned.length) return;
 
     imageViewerLastActive = document.activeElement;
-    img.src = imageSrc;
-    if (captionEl) captionEl.textContent = String(caption || '').trim();
+    imageViewerImages = cleaned;
+    imageViewerIndex = 0;
+    updateImageViewerFrame(caption);
     modal.classList.remove('hidden');
 };
 
@@ -741,6 +799,10 @@ window.closeImageViewer = function() {
     modal.classList.add('hidden');
     if (img) img.src = '';
     if (captionEl) captionEl.textContent = '';
+    const indexEl = el('imageViewerIndex');
+    if (indexEl) indexEl.textContent = '';
+    imageViewerImages = [];
+    imageViewerIndex = 0;
     if (imageViewerLastActive && typeof imageViewerLastActive.focus === 'function') {
         imageViewerLastActive.focus();
     }
@@ -761,6 +823,30 @@ function initImageViewer() {
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
             closeImageViewer();
         }
+        if (modal.classList.contains('hidden')) return;
+        if (e.key === 'ArrowLeft' && imageViewerImages.length > 1) {
+            imageViewerIndex = (imageViewerIndex - 1 + imageViewerImages.length) % imageViewerImages.length;
+            updateImageViewerFrame(el('imageViewerCaption')?.textContent || '');
+        }
+        if (e.key === 'ArrowRight' && imageViewerImages.length > 1) {
+            imageViewerIndex = (imageViewerIndex + 1) % imageViewerImages.length;
+            updateImageViewerFrame(el('imageViewerCaption')?.textContent || '');
+        }
+    });
+
+    const prevBtn = el('imageViewerPrev');
+    const nextBtn = el('imageViewerNext');
+    if (prevBtn) prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (imageViewerImages.length <= 1) return;
+        imageViewerIndex = (imageViewerIndex - 1 + imageViewerImages.length) % imageViewerImages.length;
+        updateImageViewerFrame(el('imageViewerCaption')?.textContent || '');
+    });
+    if (nextBtn) nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (imageViewerImages.length <= 1) return;
+        imageViewerIndex = (imageViewerIndex + 1) % imageViewerImages.length;
+        updateImageViewerFrame(el('imageViewerCaption')?.textContent || '');
     });
 
     modal.dataset.viewerReady = '1';
@@ -781,18 +867,165 @@ window.openAddItemModal = function() {
         const first = getItemCategories()[0];
         catIn.value = first ? first.name : '';
     }
+    editingItemRoomId = '';
+    editingItemIndex = -1;
+    itemTextOnlyMode = false;
+    if (typeof window.applyAddItemModeUI === 'function') window.applyAddItemModeUI();
+    const titleEl = el('add-item-title');
+    const saveBtn = el('save-item-btn');
+    if (titleEl) titleEl.textContent = 'Add New Item';
+    if (saveBtn) saveBtn.textContent = 'Save Item';
+    currentImageDataList = [];
     currentImageData = '';
     const fileInput = el('item-image-file'); if (fileInput) fileInput.value = '';
     if (typeof window.updateImagePreview === 'function') window.updateImagePreview(currentImageData);
+}
+
+function parseDimensionValue(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return { value: '', unit: 'cm' };
+    const m = text.match(/^(.+?)\s*(cm|m|mm|Inch|ft|Sq\.m\.)$/i);
+    if (!m) return { value: text, unit: 'cm' };
+    return { value: String(m[1] || '').trim(), unit: String(m[2] || 'cm') };
+}
+
+window.editItem = function(roomId, index) {
+    if (!isTodayEditableSelection()) { alert("View only (past date)."); return; }
+    if (localStorage.getItem("isAdmin") !== "true") { alert("Admin only."); return; }
+    const rid = String(roomId || '').trim();
+    if (!rid || !Number.isInteger(index) || index < 0) return;
+    const map = loadRoomInfoMap();
+    const list = Array.isArray(map[rid]) ? map[rid] : [];
+    const item = list[index];
+    if (!item) return;
+
+    const isTextOnly = item?.textOnly === 1 || item?.textOnly === true || String(item?.text_only || '') === '1';
+    if (isTextOnly) {
+        window.openAddTextItemModal({ roomId: rid, index, item });
+        return;
+    }
+
+    window.openAddItemModal();
+    editingItemRoomId = rid;
+    editingItemIndex = index;
+    itemTextOnlyMode = false;
+    if (typeof window.applyAddItemModeUI === 'function') window.applyAddItemModeUI();
+
+    const titleEl = el('add-item-title');
+    const saveBtn = el('save-item-btn');
+    if (titleEl) titleEl.textContent = 'Edit Item';
+    if (saveBtn) saveBtn.textContent = 'Update Item';
+
+    const nameEl = el('item-name-input');
+    const noteEl = el('item-note-input');
+    const catEl = el('item-category-input');
+    const wEl = el('item-width-input');
+    const hEl = el('item-height-input');
+    const wuEl = el('item-width-unit');
+    const huEl = el('item-height-unit');
+
+    if (nameEl) nameEl.value = String(item.name || '');
+    if (noteEl) noteEl.value = String(item.note || '');
+    if (catEl) catEl.value = String(item.category || catEl.value || '');
+
+    const wParsed = parseDimensionValue(item.width);
+    const hParsed = parseDimensionValue(item.height);
+    if (wEl) wEl.value = wParsed.value;
+    if (hEl) hEl.value = hParsed.value;
+    if (wuEl) wuEl.value = wParsed.unit;
+    if (huEl) huEl.value = hParsed.unit;
+
+    const images = Array.isArray(item?.images)
+        ? item.images.map(v => String(v || '').trim()).filter(Boolean)
+        : [];
+    const firstImage = images[0] || String(item.image || '').trim();
+    currentImageDataList = images.length ? images : (firstImage ? [firstImage] : []);
+    currentImageData = currentImageDataList[0] || '';
+    if (typeof window.updateImagePreview === 'function') window.updateImagePreview(currentImageData);
+}
+
+window.openAddTextItemModal = function(options = null) {
+    window.openAddItemModal();
+    itemTextOnlyMode = true;
+    if (typeof window.applyAddItemModeUI === 'function') window.applyAddItemModeUI();
+    const titleEl = el('add-item-title');
+    const saveBtn = el('save-item-btn');
+    const nameInput = el('item-name-input');
+    if (options && options.roomId && Number.isInteger(options.index)) {
+        editingItemRoomId = String(options.roomId);
+        editingItemIndex = options.index;
+        const item = options.item || {};
+        if (nameInput) nameInput.value = String(item.name || 'ข้อความ');
+        const noteInput = el('item-note-input');
+        if (noteInput) noteInput.value = String(item.note || '');
+        if (titleEl) titleEl.textContent = 'Edit Note';
+        if (saveBtn) saveBtn.textContent = 'Update Note';
+    } else {
+        if (nameInput) nameInput.value = 'ข้อความ';
+        if (titleEl) titleEl.textContent = 'Add Note';
+        if (saveBtn) saveBtn.textContent = 'Save Note';
+    }
+    const noteInput = el('item-note-input');
+    if (noteInput) noteInput.focus();
+}
+
+window.editInfoItem = function(roomId, index) {
+    if (!isTodayEditableSelection()) { alert("View only (past date)."); return; }
+    if (localStorage.getItem("isAdmin") !== "true") { alert("Admin only."); return; }
+    const rid = String(roomId || '').trim();
+    if (!rid || !Number.isInteger(index) || index < 0) return;
+    const map = loadRoomInfoMap();
+    const list = Array.isArray(map[rid]) ? map[rid] : [];
+    const item = list[index];
+    if (!item) return;
+    window.editItem(rid, index);
 }
 
 window.closeAddItemModal = function() {
     document.getElementById('addItemModal').classList.add('hidden');
 }
 
+window.applyAddItemModeUI = function() {
+    const imageSection = el('item-image-section');
+    const sizeSection = el('item-size-section');
+    const categorySection = el('item-category-section');
+    const nameSection = el('item-name-section');
+    const titleEl = el('add-item-title');
+    const noteInput = el('item-note-input');
+    const nameInput = el('item-name-input');
+    const saveBtn = el('save-item-btn');
+
+    if (imageSection) imageSection.classList.toggle('hidden', itemTextOnlyMode);
+    if (sizeSection) sizeSection.classList.toggle('hidden', itemTextOnlyMode);
+    if (categorySection) categorySection.classList.toggle('hidden', itemTextOnlyMode);
+    if (nameSection) nameSection.classList.toggle('hidden', itemTextOnlyMode);
+
+    if (noteInput) {
+        noteInput.rows = itemTextOnlyMode ? 14 : 3;
+        noteInput.placeholder = itemTextOnlyMode
+            ? 'พิมพ์ข้อความที่ต้องการบันทึก'
+            : 'Enter any additional notes about this item';
+    }
+    if (nameInput) {
+        nameInput.placeholder = 'e.g., Bed';
+    }
+    if (titleEl) titleEl.textContent = itemTextOnlyMode ? 'Add Note' : 'Add New Item';
+    if (saveBtn) saveBtn.textContent = itemTextOnlyMode ? 'Save Note' : 'Save Item';
+};
+
+window.toggleAddItemTextMode = function() {
+    itemTextOnlyMode = !itemTextOnlyMode;
+    window.applyAddItemModeUI();
+    if (itemTextOnlyMode) {
+        const noteInput = el('item-note-input');
+        if (noteInput) noteInput.focus();
+    }
+}
+
 window.updateImagePreview = function(url) {
     const img = el('preview-img');
     const placeholder = el('image-placeholder');
+    const countLabel = el('item-image-count');
     if (!img || !placeholder) return;
     if (url && url.trim() !== '') {
         img.src = url;
@@ -802,6 +1035,10 @@ window.updateImagePreview = function(url) {
     } else {
         img.classList.add('hidden');
         placeholder.classList.remove('hidden');
+    }
+    if (countLabel) {
+        const n = Array.isArray(currentImageDataList) ? currentImageDataList.length : 0;
+        countLabel.textContent = n > 1 ? `${n} images selected` : (n === 1 ? '1 image selected' : '');
     }
 }
 
@@ -948,6 +1185,42 @@ function getLatestResolvedRoomIds(typeFilters = null) {
     return resolvedRoomIds;
 }
 
+function getFilteredRoomStateMap(typeFilters = null) {
+    const log = readMaintTaskLog();
+    const todayISO = getTodayLocal();
+    const pendingMap = new Map();
+    const resolvedSet = new Set();
+    const hasTypeFilter = typeFilters instanceof Set && typeFilters.size > 0;
+
+    log.forEach(task => {
+        const roomId = String(task?.roomId || '').trim();
+        const taskType = String(task?.type || '').trim();
+        if (!roomId || !taskType) return;
+        if (hasTypeFilter && !typeFilters.has(taskType)) return;
+
+        const state = isDateRangeMode()
+            ? getTaskStateInRange(task, selectedRangeStartDate, selectedRangeEndDate, todayISO)
+            : getTaskStateOnDate(task, selectedSnapshotDate, todayISO);
+        if (!state) return;
+
+        const variants = buildRoomIdVariants(roomId);
+        if (state === 'resolved') {
+            variants.forEach(id => resolvedSet.add(id));
+            return;
+        }
+
+        const icon = getMaintIconByName(taskType) || '🔧';
+        const note = String(task?.note || '').trim();
+        variants.forEach(id => {
+            if (!pendingMap.has(id)) {
+                pendingMap.set(id, { icon, note, type: taskType });
+            }
+        });
+    });
+
+    return { pendingMap, resolvedSet };
+}
+
 function buildRoomIdVariants(rawRoomId) {
     const roomId = String(rawRoomId || '').trim();
     if (!roomId) return [];
@@ -993,7 +1266,7 @@ function renderResolvedThumbs() {
         room.querySelectorAll('.resolved-thumb').forEach(el => el.remove());
         const roomId = String(getRoomId(room) || '').trim();
         if (!roomId || !isResolvedRoomMatch(resolvedRoomIds, roomId)) return;
-        room.insertAdjacentHTML('beforeend', '<div class="resolved-thumb" title="Resolved">✅</div>');
+        room.insertAdjacentHTML('beforeend', '<div class="resolved-thumb" title="Resolved"></div>');
     });
 }
 
@@ -1006,17 +1279,45 @@ window.resolveMaintTaskFromDashboard = function(taskId) {
 
     if (!confirm('Mark this maintenance task as resolved?')) return;
 
+    const task = readMaintTaskLog().find(t => String(t?.id || '') === String(taskId));
+    const roomId = String(task?.roomId || '').trim();
+    if (roomId) {
+        getRoomElements().forEach(room => {
+            const rid = String(getRoomId(room) || '').trim();
+            if (!rid) return;
+            if (!buildRoomIdVariants(rid).includes(roomId) && !buildRoomIdVariants(roomId).includes(rid)) return;
+            room.setAttribute('data-maint', '');
+            room.setAttribute('data-maint-note', '');
+            room.querySelectorAll('.maint-icon,.filter-icon').forEach(el => el.remove());
+        });
+    }
+    if (task) {
+        task.status = 'resolved';
+        task.resolvedDate = getTodayLocal();
+        task.resolved_date = getTodayLocal();
+    }
+    if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
+    if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+
     (async () => {
         const res = await apiRequest('resolve_maintenance_task', {
             building: BUILDING_ID,
             task_id: taskId
         });
-        if (!res) return;
-
-        await applyRoomStatesFromDb();
-        await loadMaintenanceTasksFromDb();
-        if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
-        if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+        if (!res) {
+            await loadMaintenanceTasksFromDb();
+            if (activeFilters.size > 0) applyActiveFiltersToRooms();
+            if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
+            if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+            return;
+        }
+        // lightweight refresh in background, keep click response instant
+        window.setTimeout(async () => {
+            await loadMaintenanceTasksFromDb();
+            if (activeFilters.size > 0) applyActiveFiltersToRooms();
+            if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
+            if (typeof window.updateDashboardCharts === 'function') window.updateDashboardCharts();
+        }, 450);
     })();
 };
 
@@ -1282,21 +1583,28 @@ function initImagePicker() {
     const pickBtn = document.getElementById('image-pick-btn');
     if (!dropzone || !fileInput) return;
 
-    const handleFile = (file) => {
-        if (!file) return;
-        if (!file.type || !file.type.startsWith('image/')) {
-            alert('Please select an image file only.');
-            return;
-        }
+    const readFileAsDataUrl = (file) => new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = () => {
-            currentImageData = String(reader.result || '');
-            updateImagePreview(currentImageData);
-        };
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => resolve('');
         reader.readAsDataURL(file);
+    });
+
+    const handleFiles = async (files) => {
+        const list = Array.from(files || []);
+        const imageFiles = list.filter(file => file && file.type && file.type.startsWith('image/'));
+        if (!imageFiles.length) return;
+        const dataUrls = await Promise.all(imageFiles.map(readFileAsDataUrl));
+        const valid = dataUrls.filter(Boolean);
+        if (!valid.length) return;
+        currentImageDataList = [...currentImageDataList, ...valid].slice(0, 20);
+        currentImageData = currentImageDataList[0] || '';
+        updateImagePreview(currentImageData);
     };
 
-    fileInput.addEventListener('change', (e) => handleFile(e.target.files && e.target.files[0]));
+    fileInput.addEventListener('change', async (e) => {
+        await handleFiles(e.target.files || []);
+    });
 
     dropzone.addEventListener('click', (e) => {
         if (e.target && e.target.closest && e.target.closest('#image-pick-btn')) return;
@@ -1326,8 +1634,8 @@ function initImagePicker() {
     dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         setDragState(false);
-        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-        handleFile(file);
+        const files = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : [];
+        handleFiles(files);
     });
 }
 
@@ -1344,19 +1652,23 @@ window.saveCanvaItem = async function() {
     const widthUnitEl = el('item-width-unit'); 
     const heightUnitEl = el('item-height-unit');
 
-    const name = nameEl ? String(nameEl.value || '').trim() : '';
+    let name = nameEl ? String(nameEl.value || '').trim() : '';
     
     // 2. แก้ไขการเก็บค่า: เอาตัวเลขมาต่อกับหน่วยที่เลือกก่อนบันทึก
     // เช่น ถ้ากรอก 150 และเลือก cm จะได้ "150 cm"
-    const width = widthEl && widthEl.value ? `${widthEl.value} ${widthUnitEl.value}` : '';
-    const height = heightEl && heightEl.value ? `${heightEl.value} ${heightUnitEl.value}` : '';
+    const width = (itemTextOnlyMode || !(widthEl && widthEl.value)) ? '' : `${widthEl.value} ${widthUnitEl.value}`;
+    const height = (itemTextOnlyMode || !(heightEl && heightEl.value)) ? '' : `${heightEl.value} ${heightUnitEl.value}`;
     
     const noteEl = el('item-note-input');
     const catEl = el('item-category-input');
     const note = noteEl ? String(noteEl.value || '').trim() : '';
-    const image = currentImageData || '';
-    const category = catEl ? String(catEl.value || '') : (getItemCategories()[0]?.name || 'อื่นๆ');
+    const image = currentImageDataList[0] || currentImageData || '';
+    const category = itemTextOnlyMode
+        ? 'อื่นๆ'
+        : (catEl ? String(catEl.value || '') : (getItemCategories()[0]?.name || 'อื่นๆ'));
 
+    if (itemTextOnlyMode && !note) { alert("Please enter note text."); return; }
+    if (itemTextOnlyMode && !name) name = 'ข้อความ';
     if (!name) { alert("Please enter an item name."); return; }
 
     const roomId = getRoomId(currentViewingRoom);
@@ -1364,7 +1676,21 @@ window.saveCanvaItem = async function() {
     if (!map[roomId]) map[roomId] = [];
 
     // 3. บันทึกข้อมูลที่มีหน่วยติดไปด้วยลงใน Database/Storage
-    map[roomId].push({ name, width, height, note, image, category });
+    const itemPayload = {
+        name,
+        width,
+        height,
+        note,
+        image: itemTextOnlyMode ? '' : image,
+        images: itemTextOnlyMode ? [] : currentImageDataList.slice(),
+        category,
+        textOnly: itemTextOnlyMode ? 1 : 0
+    };
+    if (editingItemRoomId === roomId && editingItemIndex >= 0 && map[roomId][editingItemIndex]) {
+        map[roomId][editingItemIndex] = { ...map[roomId][editingItemIndex], ...itemPayload };
+    } else {
+        map[roomId].push(itemPayload);
+    }
     roomInfoMapCache = map;
     const saved = await queueSaveRoomInfoMapForRoom(roomId);
     if (!saved) {
@@ -1394,6 +1720,8 @@ window.saveCanvaItem = async function() {
     }
 
    closeAddItemModal();
+   editingItemRoomId = '';
+   editingItemIndex = -1;
 
 // ✅ บังคับให้ DOM อัปเดตแล้วค่อย render
 requestAnimationFrame(() => renderRoomInfoList(roomId));
@@ -1525,10 +1853,7 @@ function applyActiveFiltersToRooms() {
     const allRooms = getRoomElements();
     document.body.classList.toggle('show-filter-icons', activeFilters.size > 0);
     applyHighlightEffect();
-    const categories = (() => {
-        try { return JSON.parse(localStorage.getItem('maint_cats_final_v1')) || []; } catch { return []; }
-    })();
-    const iconMap = new Map(categories.map(c => [c.name.trim(), c.icon]));
+    const { pendingMap } = getFilteredRoomStateMap(activeFilters);
 
     allRooms.forEach(room => {
         // remove only filter-related markers/icons, keep persisted maint-icon from DB
@@ -1541,32 +1866,41 @@ function applyActiveFiltersToRooms() {
     });
 
     if (activeFilters.size === 0) {
-        try { applySavedRoomStates(); } catch (e) {}
-        try { applyRoomStatesFromDb(); } catch (e) {}
         return;
     }
 
     allRooms.forEach(room => {
-        const rawMaint = room.getAttribute('data-maint') || "";
-        const cleanMaint = rawMaint.trim();
-        const isMatch = activeFilters.has(cleanMaint) || activeFilters.has(rawMaint);
-        if (!isMatch) {
+        const roomId = String(getRoomId(room) || '').trim();
+        if (!roomId) {
             // When a Service Status filter is active, hide non-matching persisted icons.
             room.querySelectorAll('.maint-icon:not(.filter-maint-icon)').forEach(el => {
                 el.style.setProperty('display', 'none', 'important');
             });
             return;
         }
+
+        let pendingEntry = null;
+        const variants = buildRoomIdVariants(roomId);
+        for (const id of variants) {
+            if (pendingMap.has(id)) {
+                pendingEntry = pendingMap.get(id);
+                break;
+            }
+        }
+        if (!pendingEntry) {
+            room.querySelectorAll('.maint-icon:not(.filter-maint-icon)').forEach(el => {
+                el.style.setProperty('display', 'none', 'important');
+            });
+            return;
+        }
+
         room.querySelectorAll('.maint-icon:not(.filter-maint-icon)').forEach(el => {
             el.style.setProperty('display', 'none', 'important');
         });
-        if (isMatch) {
-            const icon = iconMap.get(cleanMaint) || iconMap.get(rawMaint) || "🔧";
-            room.insertAdjacentHTML('beforeend', `<span class="filter-icon" aria-hidden="true">${icon}</span>`);
-            const note = (room.getAttribute('data-maint-note') || '').trim();
-            const label = note ? `Task: ${note}` : 'Task: Unspecified';
-            room.insertAdjacentHTML('beforeend', `<div class="maint-icon filter-maint-icon" data-info="${label}">${icon}</div>`);
-        }
+        const icon = pendingEntry.icon || "🔧";
+        room.insertAdjacentHTML('beforeend', `<span class="filter-icon" aria-hidden="true">${icon}</span>`);
+        const label = pendingEntry.note ? `Task: ${pendingEntry.note}` : 'Task: Unspecified';
+        room.insertAdjacentHTML('beforeend', `<div class="maint-icon filter-maint-icon" data-info="${label}">${icon}</div>`);
     });
 }
 
@@ -1805,6 +2139,7 @@ getRoomElements().forEach(el => {
 
             quickSaveInFlight += 1;
             apiRequest('save_room_state', payload)
+                .then(() => apiRequest('save_room_snapshot', { ...payload, snapshot_date: getTodayLocal() }))
                 .catch((error) => {
                     console.error('Save error:', error);
                 })
@@ -2050,6 +2385,9 @@ if (btnSave) {
             window.applyRoomTypeLegendHighlight();
         }
         renderResolvedThumbs();
+        if (activeFilters.size > 0) {
+            applyActiveFiltersToRooms();
+        }
     }
 
     function applySavedRoomStates() {
@@ -2058,10 +2396,11 @@ if (btnSave) {
     }
     
 async function applyRoomStatesFromDb() {
-        const isToday = selectedSnapshotDate === getTodayLocal();
+        const snapshotDate = isDateRangeMode() ? selectedRangeEndDate : selectedSnapshotDate;
+        const isToday = snapshotDate === getTodayLocal();
         const res = isToday
             ? await apiRequest('get_all_room_states', { building: BUILDING_ID })
-            : await apiRequest('get_room_snapshots', { building: BUILDING_ID, snapshot_date: selectedSnapshotDate });
+            : await apiRequest('get_room_snapshots', { building: BUILDING_ID, snapshot_date: snapshotDate });
         if (!res || !Array.isArray(res.rooms)) return;
         const map = {};
         res.rooms.forEach(row => {
@@ -2088,16 +2427,20 @@ async function applyRoomStatesFromDb() {
             const startISO = (startRaw || endRaw).slice(0, 10);
             const endISO = (endRaw || startRaw).slice(0, 10);
             setSelectedDateRange(startISO, endISO);
-
-            // โหลดข้อมูลห้องและสิ่งของจากฐานข้อมูลแบบ Real-time
-            await applyRoomStatesFromDb();
-            await loadRoomInfoMapFromDb();
-            await loadMaintenanceTasksFromDb();
-
-            // อัปเดตแถบ Service Status ด้านซ้ายให้ตรงกับวันนั้นๆ
-            if (typeof renderServiceSidebar === 'function') {
-                renderServiceSidebar();
+            // render immediately from cache first (no waiting)
+            if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
+            if (!document.getElementById('dashboardModal')?.classList.contains('hidden') && typeof window.updateDashboardCharts === 'function') {
+                window.updateDashboardCharts();
             }
+
+            // then fetch/update in parallel
+            await Promise.allSettled([
+                applyRoomStatesFromDb(),
+                loadRoomInfoMapFromDb(),
+                loadMaintenanceTasksFromDb()
+            ]);
+
+            if (typeof renderServiceSidebar === 'function') renderServiceSidebar();
             if (!document.getElementById('dashboardModal')?.classList.contains('hidden') && typeof window.updateDashboardCharts === 'function') {
                 window.updateDashboardCharts();
             }
@@ -2123,7 +2466,6 @@ async function applyRoomStatesFromDb() {
         });
     }
 
-    applySavedRoomStates();
     // Fast first render from current cache while network requests are in-flight.
     renderServiceSidebar();
         // Auto-assign data-room-id for rooms that don't have one yet.
@@ -2165,6 +2507,7 @@ async function applyRoomStatesFromDb() {
         loadRoomInfoMapFromDb(),
         loadMaintenanceTasksFromDb()
     ]).finally(() => {
+        document.documentElement.classList.remove('room-hydrating');
         applyApBadges();
         renderServiceSidebar();
         initAdminButtonShared();
@@ -2412,24 +2755,32 @@ async function applyRoomStatesFromDb() {
         applyPhoneVisibility();
     }
 
-    let buildingAutoScale = 1;
-    let buildingUserScale = 1;
-    let pinchStartDistance = 0;
-    let pinchStartUserScale = 1;
+let buildingAutoScale = 1;
+let buildingUserScale = 1;
+let pinchStartDistance = 0;
+let pinchStartUserScale = 1;
 
-    function getTouchDistance(touches) {
+function getBuildingScaleTarget() {
+    if (BUILDING_ID === 'B') {
+        return document.querySelector('.building-b-container') || document.querySelector('.building-plan');
+    }
+    return document.querySelector('.building') || document.querySelector('.building-plan');
+}
+
+function getTouchDistance(touches) {
         if (!touches || touches.length < 2) return 0;
         const dx = touches[0].clientX - touches[1].clientX;
         const dy = touches[0].clientY - touches[1].clientY;
         return Math.hypot(dx, dy);
     }
 
-    function applyBuildingScale() {
-        const building = document.querySelector('.building-plan, .building');
+function applyBuildingScale() {
+        const building = getBuildingScaleTarget();
         const wrapper = document.querySelector('.plan-wrapper');
         if (!building || !wrapper) return;
         const finalScale = buildingAutoScale * buildingUserScale;
         const planHeight = building.scrollHeight || building.getBoundingClientRect().height;
+        building.style.transformOrigin = 'top center';
         building.style.transform = `scale(${finalScale})`;
         wrapper.style.minHeight = `${Math.ceil(planHeight * finalScale) + 24}px`;
     }
@@ -2473,7 +2824,7 @@ async function applyRoomStatesFromDb() {
 
     // Fit the whole plan section to current viewport width.
     function scaleBuildingToFit() {
-        const building = document.querySelector('.building-plan, .building');
+        const building = getBuildingScaleTarget();
         const wrapper = document.querySelector('.plan-wrapper');
         if (!building || !wrapper) return;
 
@@ -2730,6 +3081,7 @@ function initDashboardSummary() {
     if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
     if (printBtn) printBtn.addEventListener('click', () => {
+        document.body.dataset.printMode = 'plan';
         document.body.classList.add('print-plan');
         window.print();
     });
@@ -2790,14 +3142,14 @@ function initDashboardSummary() {
         document.body.getAttribute('data-building-id') === 'B' ||
         plan.classList.contains('building-b-wrapper');
 
-    const fitMultiplier = isBuildingB ? 0.92 : 1.12;
+    const fitMultiplier = isBuildingB ? 0.90 : 0.92;
     const scale = Math.min(scaleX, scaleY) * fitMultiplier;
 
     const scaledW = planHeight * scale;
     const scaledH = planWidth * scale;
 
-    const extraShiftX = isBuildingB ? 80 : 150;
-    const extraShiftY = isBuildingB ? -370 : -150;
+    const extraShiftX = 0;
+    const extraShiftY = isBuildingB ? -370 : -170;
 
     const translateX = (printableW - scaledW) / 2 + extraShiftX;
     const translateY = (printableH - scaledH) / 2 + scaledH + extraShiftY;
@@ -2833,9 +3185,17 @@ async function prepareReportPrint() {
 
 
 window.addEventListener('beforeprint', () => {
+    const mode = document.body.dataset.printMode || 'plan';
     scalePlanForPrintPortrait();
-    document.body.classList.add('print-plan');
-    document.body.classList.remove('print-report');
+    if (mode === 'report') {
+        const dashboardModal = document.getElementById('dashboardModal');
+        if (dashboardModal) dashboardModal.classList.remove('hidden');
+        document.body.classList.add('print-report');
+        document.body.classList.remove('print-plan');
+    } else {
+        document.body.classList.add('print-plan');
+        document.body.classList.remove('print-report');
+    }
 });
 
 
@@ -2847,16 +3207,10 @@ window.addEventListener('afterprint', () => {
     document.body.style.setProperty('--print-rotate-tx', '0px');
     document.body.style.setProperty('--print-rotate-ty', '0px');
     document.body.classList.remove('print-report');
-        document.body.classList.remove('print-plan');
+    document.body.classList.remove('print-plan');
+    document.body.dataset.printMode = '';
 });
 }
-
-// Fallback: always force report mode for Ctrl+P / system print flows
-window.addEventListener('beforeprint', () => {
-    const dashboardModal = document.getElementById('dashboardModal');
-    if (dashboardModal) dashboardModal.classList.remove('hidden');
-    document.body.classList.add('print-report');
-});
 
 // 🔥 ทำให้ปุ่ม "ปิดงานซ่อม" โชว์/ซ่อน ทันทีที่กดเปลี่ยน Dropdown
 document.getElementById('editMaintStatus')?.addEventListener('change', function() {
